@@ -19,6 +19,9 @@ venv311/
 .env
 .venv/
 
+# Avatar / environment source assets stay local (FBX/TGA/NPZ too large for GitHub)
+assets/
+
 # KILI raw Unreal exports (large); runtime cache may be committed for clone-without-FBX
 KILI/*.FBX
 KILI/*.fbx

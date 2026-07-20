@@ -1,0 +1,21 @@
+# AXYX rendering defaults — loaded by RenderSettings.
+# No magic constants in call sites; override per deployment as needed.
+
+quality: high
+lighting_preset: studio
+environment_preset: studio
+camera_preset: clinical
+
+shadows_enabled: true
+reflections_enabled: true
+fog_enabled: false
+msaa_samples: 2
+
+floor_metallic: 0.08
+floor_roughness: 0.72
+
+hdri_enabled: true
+
+material_bone: graphite
+material_joint: ceramic
+material_floor: floor

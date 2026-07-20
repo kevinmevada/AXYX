@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "name": "triangle",
+  "display_name": "Unit Triangle",
+  "type": "digital",
+  "asset_id": "avatar.triangle.default",
+  "coordinate_system": {
+    "up": "z",
+    "forward": "x",
+    "units": "m",
+    "source": "test"
+  },
+  "skeleton": {
+    "hierarchy_cache": "skeleton.json"
+  },
+  "mesh": {
+    "path": "mesh.gltf",
+    "default_lod": 0
+  },
+  "materials": {
+    "body": "graphite"
+  },
+  "textures": {},
+  "lod": [
+    {
+      "level": 0,
+      "path": "mesh.gltf"
+    }
+  ]
+}

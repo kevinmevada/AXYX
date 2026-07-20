@@ -28,6 +28,25 @@ from motion_engine.bone_geometry import (
 from motion_engine.camera import CameraState
 from motion_engine.colors import ColorRGB, DEFAULT_THEME, Theme
 from motion_engine.exceptions import MotionEngineError
+from motion_engine.rendering.avatar import AvatarManager, ProceduralAvatar
+from motion_engine.rendering.context import RenderSettings, RenderingContext
+from motion_engine.rendering.environment import EnvironmentManager, StudioEnvironment
+from motion_engine.rendering.events import (
+    EnvironmentChanged,
+    LightingChanged,
+    RenderEventBus,
+)
+from motion_engine.rendering.lifecycle import RenderLifecycle
+from motion_engine.rendering.lighting import LightingManager
+from motion_engine.rendering.materials import MaterialLibrary, apply_pbr as apply_pbr_material
+from motion_engine.rendering.plugins import PluginRegistry
+from motion_engine.rendering.quality import get_quality
+from motion_engine.rendering.rendergraph import RenderContext, RenderGraph
+from motion_engine.rendering.resources import ResourceManager
+from motion_engine.rendering.scene import SceneGraph
+from motion_engine.rendering.state import RendererState, RendererStateMachine
+from motion_engine.rendering.backend import PYVISTA_CAPABILITIES, NULL_CAPABILITIES
+from motion_engine.rendering.metrics import PerformanceMetrics
 from motion_engine.scene import Scene
 
 logger = logging.getLogger(__name__)
@@ -179,10 +198,15 @@ class NullRenderer(Renderer):
         self.draw_calls: list[str] = []
         self.camera: CameraState | None = None
         self.last_screenshot: Path | None = None
+        self.capabilities = NULL_CAPABILITIES
+        self.state_machine = RendererStateMachine()
+        self.metrics = PerformanceMetrics()
 
     def initialize(self, title: str = "Motion Engine Viewer") -> None:
+        self.state_machine.transition(RendererState.INITIALIZING)
         self.initialized = True
         self.draw_calls.append(f"initialize:{title}")
+        self.state_machine.transition(RendererState.READY)
 
     def clear(self) -> None:
         self.draw_calls.append("clear")
@@ -253,8 +277,10 @@ class NullRenderer(Renderer):
         return path
 
     def close(self) -> None:
+        self.state_machine.transition(RendererState.SHUTTING_DOWN, force=True)
         self.closed = True
         self.draw_calls.append("close")
+        self.state_machine.transition(RendererState.DESTROYED)
 
 
 class PyVistaRenderer(Renderer):
@@ -313,6 +339,42 @@ class PyVistaRenderer(Renderer):
         self._shadow_sig: tuple[Any, ...] | None = None
         self._vignette_ready = False
         self._ibl_ready = False
+        # Layered rendering architecture (Phase-0 / 0.5 Digital Twin prep).
+        self.state_machine = RendererStateMachine()
+        self.capabilities = PYVISTA_CAPABILITIES
+        self.metrics = PerformanceMetrics()
+        self.render_settings = RenderSettings.load()
+        self.resource_manager = ResourceManager()
+        self.scene_graph = SceneGraph()
+        self.event_bus = RenderEventBus()
+        self.material_library = MaterialLibrary()
+        self.plugins = PluginRegistry()
+        self.lifecycle = RenderLifecycle()
+        self.avatar_manager = AvatarManager()
+        self.avatar_manager.register(ProceduralAvatar(), make_active=True)
+        self.environment_manager = EnvironmentManager(
+            self.render_settings.environment_preset
+        )
+        # Compat: existing code paths use ``.environment`` (StudioEnvironment).
+        self.environment: StudioEnvironment = self.environment_manager.studio
+        self.lighting_manager = LightingManager(
+            self.render_settings.lighting_preset
+        )
+        self.render_graph = RenderGraph.create_default()
+        self.quality = get_quality(self.render_settings.quality)
+        self.rendering_context = RenderingContext(
+            resource_manager=self.resource_manager,
+            scene_graph=self.scene_graph,
+            avatar_manager=self.avatar_manager,
+            lighting_manager=self.lighting_manager,
+            environment=self.environment_manager,
+            event_bus=self.event_bus,
+            settings=self.render_settings,
+            quality_name=self.render_settings.quality,
+            lighting_preset=self.render_settings.lighting_preset,
+            environment_preset=self.render_settings.environment_preset,
+            camera_preset=self.render_settings.camera_preset,
+        )
 
     @property
     def plotter(self) -> Any:
@@ -320,7 +382,13 @@ class PyVistaRenderer(Renderer):
             raise RendererError("Renderer is not initialized")
         return self._plotter
 
+    @property
+    def renderer_state(self) -> RendererState:
+        """Current explicit renderer state (architecture freeze)."""
+        return self.state_machine.state
+
     def initialize(self, title: str = "Motion Engine Viewer") -> None:
+        self.state_machine.transition(RendererState.INITIALIZING)
         if self._plotter is None:
             self._plotter = self._pv.Plotter(
                 window_size=(1600, 960),
@@ -333,14 +401,17 @@ class PyVistaRenderer(Renderer):
         self._setup_lighting()
         self._setup_environment()
         self._closed = False
+        self.state_machine.transition(RendererState.READY)
 
     def attach_plotter(self, plotter: Any) -> None:
         """Attach an externally owned Qt/PyVista plotter."""
+        self.state_machine.transition(RendererState.INITIALIZING, force=True)
         self._plotter = plotter
         self._owns_plotter = False
         self._configure_render_window()
         self._setup_lighting()
         self._setup_environment()
+        self.state_machine.transition(RendererState.READY)
 
     def clear(self) -> None:
         """Clear per-frame draw queues (does not destroy GPU skeleton cache)."""
@@ -440,7 +511,12 @@ class PyVistaRenderer(Renderer):
         if self._pending_camera is not None:
             self._apply_camera(self._pending_camera)
             self._pending_camera = None
+        # Phase-0: draw_* queues still drive content; RenderGraph is wired for
+        # future Digital Twin passes (see docs/architecture/rendering.md).
+        self.state_machine.transition(RendererState.RENDERING)
+        _ = RenderContext(backend=self, plotter=self._plotter)
         self._plotter.render()
+        self.state_machine.transition(RendererState.READY)
 
     def poll_events(self) -> bool:
         if self._closed or self._plotter is None:
@@ -464,6 +540,11 @@ class PyVistaRenderer(Renderer):
 
     def close(self) -> None:
         self._closed = True
+        self.state_machine.transition(RendererState.SHUTTING_DOWN, force=True)
+        try:
+            self.lifecycle.shutdown()
+        except Exception:
+            logger.debug("Lifecycle shutdown failed", exc_info=True)
         self._skeleton_sig = None
         self._joint_mesh = None
         self._bone_mesh = None
@@ -485,6 +566,7 @@ class PyVistaRenderer(Renderer):
         self._labels.clear()
         self._lab_bounds = None
         self._env_built = False
+        self.state_machine.transition(RendererState.DESTROYED)
 
     def _invalidate_skeleton_cache(self) -> None:
         self._skeleton_sig = None
@@ -502,14 +584,13 @@ class PyVistaRenderer(Renderer):
         self._remove_actor("joints")
         self._remove_actor("labels")
 
-    # ---- setup -----------------------------------------------------------
-
     def _configure_render_window(self) -> None:
         assert self._plotter is not None
         ren_win = self._plotter.ren_win
+        msaa = int(getattr(self.quality, "msaa", self.render_settings.msaa_samples))
         if ren_win is not None:
             try:
-                ren_win.SetMultiSamples(2)
+                ren_win.SetMultiSamples(max(0, msaa))
             except Exception:
                 pass
         try:
@@ -521,79 +602,62 @@ class PyVistaRenderer(Renderer):
         self._setup_ibl()
         self._ensure_vignette()
 
+    def register_effect(self, name: str, factory: Any) -> None:
+        """Plugin: register a named post/effect factory."""
+        self.plugins.register_effect(name, factory)
+
+    def register_avatar(self, name: str, factory: Any) -> None:
+        """Plugin: register an avatar factory (no switch statements)."""
+        self.plugins.register_avatar(name, factory)
+
+    def register_environment(self, name: str, factory: Any) -> None:
+        """Plugin: register an environment factory."""
+        self.plugins.register_environment(name, factory)
+
+    def register_material(self, name: str, factory: Any) -> None:
+        """Plugin: register a material factory."""
+        self.plugins.register_material(name, factory)
+
+    def set_lighting_preset(self, name: str) -> None:
+        """Switch lighting preset and re-apply if a plotter is attached."""
+        self.lighting_manager.set_preset(name)
+        self.rendering_context.lighting_preset = name
+        self.event_bus.emit(LightingChanged(name))
+        if self._plotter is not None:
+            self._setup_lighting()
+
+    def set_environment_preset(self, name: str) -> None:
+        """Switch environment preset and re-apply if a plotter is attached."""
+        self.environment_manager.set_preset(name)
+        self.environment = self.environment_manager.studio
+        self.rendering_context.environment_preset = name
+        self.event_bus.emit(EnvironmentChanged(name))
+        if self._plotter is not None:
+            self._setup_environment()
+            self._setup_atmosphere()
+            self._setup_ibl()
+
+    # ---- setup -----------------------------------------------------------
+
     def _setup_atmosphere(self) -> None:
         """Bright ambient fill for a light studio — no fog curtain."""
         assert self._plotter is not None
-        renderer = self._plotter.renderer
-        try:
-            if hasattr(renderer, "SetUseFog"):
-                renderer.SetUseFog(False)
-            elif hasattr(renderer, "UseFogOff"):
-                renderer.UseFogOff()
-            renderer.SetAmbient(0.28, 0.28, 0.29)
-            renderer.SetTwoSidedLighting(True)
-        except Exception:
-            logger.debug("Atmosphere setup skipped", exc_info=True)
+        self.environment_manager.configure_renderer(self._plotter)
+        self._ibl_ready = bool(getattr(self.environment, "_ibl_ready", False))
 
     def _setup_ibl(self) -> None:
-        """Bright studio equirectangular map for PBR metallics on a light floor."""
+        """IBL is installed by :class:`StudioEnvironment`."""
         if self._ibl_ready or self._plotter is None:
             return
-        try:
-            h, w = 96, 192
-            img = np.zeros((h, w, 3), dtype=np.uint8)
-            for y in range(h):
-                t = y / max(h - 1, 1)
-                top = np.array([247, 247, 248], dtype=float)
-                bot = np.array([230, 231, 234], dtype=float)
-                row = (1.0 - t) * top + t * bot
-                img[y, :] = np.clip(row, 0, 255).astype(np.uint8)
-            yy, xx = np.mgrid[0:h, 0:w]
-            key = np.exp(
-                -(((xx / w - 0.28) ** 2) / 0.05 + ((yy / h - 0.20) ** 2) / 0.04)
-            )
-            img = np.clip(
-                img.astype(float) + key[:, :, None] * np.array([18, 16, 12]),
-                0,
-                255,
-            ).astype(np.uint8)
-            tex = self._pv.numpy_to_texture(img)
-            self._plotter.set_environment_texture(tex, is_srgb=True)
-            self._ibl_ready = True
-        except Exception:
-            logger.debug("IBL environment texture unavailable", exc_info=True)
+        self.environment.configure_renderer(self._plotter)
+        self._ibl_ready = bool(getattr(self.environment, "_ibl_ready", False))
 
     def _setup_lighting(self) -> None:
         """Soft upper-left key — light floor does most of the work."""
         assert self._plotter is not None
-        self._plotter.remove_all_lights()
-        self._studio_lights.clear()
-        key = self._pv.Light(
-            position=(-1.5, -1.0, 2.6),
-            focal_point=(0.0, 0.0, 0.55),
-            color=(1.0, 0.99, 0.97),
-            intensity=0.48,
-            positional=False,
-        )
-        fill = self._pv.Light(
-            position=(1.2, -0.3, 1.5),
-            focal_point=(0.0, 0.0, 0.5),
-            color=(0.95, 0.96, 0.98),
-            intensity=0.22,
-            positional=False,
-        )
-        ambient = self._pv.Light(light_type="headlight", intensity=0.18)
-        for label, light in (
-            ("key", key),
-            ("fill", fill),
-            ("ambient", ambient),
-        ):
-            self._plotter.add_light(light)
-            self._studio_lights[label] = light
-        try:
-            self._plotter.disable_shadows()
-        except Exception:
-            pass
+        self.lighting_manager.enabled = self._lighting_enabled
+        self.lighting_manager.setup(self._plotter)
+        self._studio_lights = dict(self.lighting_manager.lights)
 
     def _setup_environment(self) -> None:
         self._env_built = False
@@ -659,23 +723,14 @@ class PyVistaRenderer(Renderer):
         specular_power: float = 22.0,
         emission: tuple[float, float, float] | None = None,
     ) -> None:
-        try:
-            prop = actor.GetProperty()
-            prop.SetInterpolationToPBR()
-            prop.SetMetallic(float(metallic))
-            prop.SetRoughness(float(roughness))
-            prop.SetSpecular(float(specular))
-            prop.SetSpecularPower(float(specular_power))
-            if emission is not None:
-                if hasattr(prop, "SetEmissiveFactor"):
-                    prop.SetEmissiveFactor(*emission)
-                elif hasattr(prop, "SetEmissive"):
-                    prop.SetEmissive(True)
-        except Exception:
-            prop = actor.GetProperty()
-            prop.SetInterpolationToPhong()
-            prop.SetSpecular(float(specular))
-            prop.SetSpecularPower(float(specular_power))
+        apply_pbr_material(
+            actor,
+            metallic=metallic,
+            roughness=roughness,
+            specular=specular,
+            specular_power=specular_power,
+            emission=emission,
+        )
 
     # ---- flush -----------------------------------------------------------
 

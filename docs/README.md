@@ -1,8 +1,16 @@
-# AXYX documentation
+# AXYX Documentation
 
-Design notes and figures for the research platform.
+## Architecture (frozen)
 
-| Doc | Description |
-|-----|-------------|
-| [overview.md](overview.md) | Project overview & pipeline |
-| [motion_database_design.md](motion_database_design.md) | MotionDatabase schema notes |
+- [architecture/ARCHITECTURE_FREEZE.md](architecture/ARCHITECTURE_FREEZE.md)
+- [architecture/rendering.md](architecture/rendering.md)
+- [architecture/dependency_rules.md](architecture/dependency_rules.md)
+
+## Specs
+
+- [specs/phase1/](specs/phase1/) — **Phase 1 Digital Twin Avatar Runtime** (implementation contract)
+
+## Other
+
+- [overview.md](overview.md)
+- [motion_database_design.md](motion_database_design.md)

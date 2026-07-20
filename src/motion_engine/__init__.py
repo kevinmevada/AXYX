@@ -27,6 +27,14 @@ from motion_engine.exceptions import (
     SubjectNotFoundError,
     VariableNotFoundError,
 )
+from motion_engine.rendering.errors import (
+    AvatarLoadError,
+    MaterialLoadError,
+    MeshLoadError,
+    RenderBackendError,
+    RenderError,
+    ResourceNotFoundError,
+)
 from motion_engine.loader import DatasetLoader, MotionDatabaseLoader, load_motion_database
 from motion_engine.models import (
     CenterOfMass,
@@ -77,6 +85,12 @@ __all__ = [
     "SubjectNotFoundError",
     "SessionNotFoundError",
     "VariableNotFoundError",
+    "RenderError",
+    "RenderBackendError",
+    "AvatarLoadError",
+    "MeshLoadError",
+    "MaterialLoadError",
+    "ResourceNotFoundError",
     "ValidationReport",
     "Trajectory",
     "Marker",
