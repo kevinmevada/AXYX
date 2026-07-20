@@ -3,7 +3,7 @@ AXYX - Motion Engine
 ====================
 
 Core SDK for the AXYX research platform: clinical gait reconstruction,
-visualization, and Unreal-facing export.
+visualization.
 
 Public API focuses on the domain model and the MATLAB → MotionDatabase
 loader/parser pipeline.
@@ -55,9 +55,8 @@ from motion_engine.skeleton import (
 )
 from motion_engine.skeleton_definition import SkeletonDefinition
 from motion_engine.animation_clip import AnimationClip, AnimationClipError
-from motion_engine.retarget import MetaHumanRetargeter, Retargeter, RetargetProfile
+from motion_engine.retarget import Retargeter, RetargetProfile
 from motion_engine.exporter import AnimationJsonExporter, ExportFormat, create_exporter
-from motion_engine.unreal import UnrealExporter, UnrealPipeline
 from motion_engine.viewer import (
     MatplotlibViewer,
     Open3DViewer,
@@ -112,14 +111,11 @@ __all__ = [
     "ViewerError",
     "AnimationClip",
     "AnimationClipError",
-    "MetaHumanRetargeter",
     "Retargeter",
     "RetargetProfile",
     "AnimationJsonExporter",
     "ExportFormat",
     "create_exporter",
-    "UnrealExporter",
-    "UnrealPipeline",
 ]
 
 __version__ = "0.1.0"

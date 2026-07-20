@@ -20,7 +20,6 @@ from typing import Any
 
 import numpy as np
 
-from motion_engine.avatar import AvatarBackend, create_default_avatar
 from motion_engine.camera import BoundingBox, CameraController, CameraPreset, CameraState
 from motion_engine.colors import Theme, get_theme
 from motion_engine.exceptions import MotionEngineError
@@ -112,7 +111,6 @@ class SkeletonViewer(Viewer):
         theme: str | Theme = "studio",
         backend: str = "auto",
         block: bool = True,
-        avatar: AvatarBackend | str | None = None,
     ) -> None:
         self.theme = theme if isinstance(theme, Theme) else get_theme(theme)
         self.renderer: Renderer = renderer or create_default_renderer(
@@ -125,18 +123,6 @@ class SkeletonViewer(Viewer):
         self.timeline = Timeline(n_frames=0)
         self.playback = PlaybackController(self.timeline)
 
-        if isinstance(avatar, AvatarBackend):
-            self.avatar = avatar
-        else:
-            self.avatar = create_default_avatar(
-                avatar if isinstance(avatar, str) else None
-            )
-        try:
-            self.avatar.attach(self.renderer)
-        except Exception:
-            logger.exception("Avatar attach failed; continuing")
-
-        # Procedural metallic stick-figure — disabled when a mesh avatar draws.
         self.show_joints = True
         self.show_bones = True
         self.show_joint_labels = False
@@ -187,20 +173,6 @@ class SkeletonViewer(Viewer):
             self.renderer.initialize(title=title)
             self.renderer.set_background(self.theme.background)
             self._initialized = True
-
-        try:
-            self.avatar.load(skeleton)
-        except Exception:
-            logger.exception(
-                "Avatar %s failed to load; falling back to metallic stick-figure",
-                getattr(self.avatar, "id", "?"),
-            )
-            from motion_engine.avatar.metallic_backend import MetallicAvatar
-
-            self.avatar = MetallicAvatar()
-            self.avatar.attach(self.renderer)
-
-        if isinstance(self.renderer, NullRenderer) or not self.block:
             self.playback.play()
             self.update_frame(0)
             if self.block and not isinstance(self.renderer, NullRenderer):
@@ -445,10 +417,7 @@ class SkeletonViewer(Viewer):
                 self._bbox_extent * DEFAULT_AXES_LENGTH_RATIO,
             )
 
-        draw_metallic = bool(
-            getattr(self.avatar, "draws_procedural_skeleton", True)
-        )
-        if draw_metallic and self.show_bones:
+        if self.show_bones:
             for bone_name, bone in self.skeleton.bones.items():
                 start = pose.get_position(bone.parent_joint)
                 end = pose.get_position(bone.child_joint)
@@ -470,7 +439,7 @@ class SkeletonViewer(Viewer):
                         bone_name, mid, self.theme.label
                     )
 
-        if draw_metallic and self.show_joints:
+        if self.show_joints:
             for joint_name, position in pose.joint_positions.items():
                 if not np.all(np.isfinite(position)):
                     continue
@@ -489,11 +458,6 @@ class SkeletonViewer(Viewer):
                     self.renderer.draw_label_3d(
                         joint_name, position, self.theme.label
                     )
-
-        try:
-            self.avatar.update(pose, skeleton=self.skeleton)
-        except Exception:
-            logger.debug("Avatar update failed", exc_info=True)
 
         if self.camera.is_dirty():
             self.renderer.set_camera(self.camera.get_state())

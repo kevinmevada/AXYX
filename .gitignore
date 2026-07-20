@@ -19,13 +19,21 @@ venv311/
 .env
 .venv/
 
-# KILI raw Unreal exports (large); keep manifests + processed cache optionally local
+# KILI raw Unreal exports (large); runtime cache may be committed for clone-without-FBX
 KILI/*.FBX
 KILI/*.fbx
 KILI/*.TGA
 KILI/*.tga
-KILI/cache/textures/
 KILI/cache/*.npz
+!KILI/cache/body_lod1.npz
+!KILI/cache/body_lod2.npz
+!KILI/cache/body_lod3.npz
+!KILI/cache/outfit_lod0.npz
+KILI/cache/textures/*
+!KILI/cache/textures/body_bc.png
+!KILI/cache/textures/body_n.png
+!KILI/cache/textures/body_srmf.png
+!KILI/cache/textures/body_scatter.png
 KILI/cache/_*.json
 
 # IDE / OS

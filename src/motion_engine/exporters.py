@@ -36,14 +36,6 @@ class UnityExporter(SkeletonExporter):
     def export(self, skeleton: Skeleton, path: Path) -> Path:
         raise NotImplementedError("UnityExporter is reserved for a future phase.")
 
-
-class UnrealExporter(SkeletonExporter):
-    """TODO: Export Unreal Engine Control Rig / FBX assets."""
-
-    def export(self, skeleton: Skeleton, path: Path) -> Path:
-        raise NotImplementedError("UnrealExporter is reserved for a future phase.")
-
-
 class OpenSimExporter(SkeletonExporter):
     """TODO: Export OpenSim .trc / .mot compatible kinematics."""
 

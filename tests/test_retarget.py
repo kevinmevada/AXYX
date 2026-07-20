@@ -9,9 +9,8 @@ import pytest
 import yaml
 
 from motion_engine.animation_clip import AnimationClip
-from motion_engine.retarget import MetaHumanRetargeter, RetargetProfile
+from motion_engine.retarget import Retargeter, RetargetProfile
 from motion_engine.skeleton import Bone, Joint, Pose, Skeleton
-from motion_engine.unreal.metahuman_mapper import MetaHumanMapper
 
 
 def _skeleton() -> Skeleton:
@@ -70,20 +69,24 @@ def test_profile_from_yaml(tmp_path: Path) -> None:
     assert "thigh_l" in profile.mapped_targets()
 
 
-def test_retarget_renames_joints() -> None:
+def test_retarget_renames_joints(tmp_path: Path) -> None:
+    path = tmp_path / "map.yaml"
+    path.write_text(
+        yaml.dump(
+            {
+                "name": "test_map",
+                "source_skeleton": "src",
+                "target_skeleton": "dst",
+                "root_joint": {"source": "Pelvis", "target": "pelvis"},
+                "joints": {"Pelvis": "pelvis", "Head": "head", "LHip": "thigh_l"},
+            }
+        ),
+        encoding="utf-8",
+    )
     clip = AnimationClip.from_skeleton(_skeleton())
-    mapping = Path("config/retarget_metahuman.yaml")
-    if not mapping.is_file():
-        pytest.skip("MetaHuman mapping YAML missing")
-    out = MetaHumanRetargeter(mapping).retarget(clip)
+    out = Retargeter(RetargetProfile.from_yaml(path)).retarget(clip)
     assert "pelvis" in out.joint_order
     assert "Pelvis" not in out.joint_order
     assert out.root_joint == "pelvis"
     assert out.n_frames == clip.n_frames
     assert out.metadata["retarget_profile"]
-
-
-def test_metahuman_mapper_apply() -> None:
-    clip = AnimationClip.from_skeleton(_skeleton())
-    mapped = MetaHumanMapper().apply(clip)
-    assert mapped.get_frame(0).transforms["pelvis"].valid is True

@@ -1,8 +1,7 @@
 ﻿"""Swappable rendering backend for AXYX.
 
 The studio UI depends on :class:`RendererService`. The default backend drives
-the embedded center-panel viewport. A future Unreal backend can replace this
-without changing widgets, models, or controller call sites.
+the embedded center-panel viewport. Backends are swappable without changing widgets, models, or controller call sites.
 """
 
 from __future__ import annotations

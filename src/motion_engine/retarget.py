@@ -2,7 +2,7 @@
 Generic skeleton-to-skeleton retargeting engine.
 
 Mappings are always loaded from YAML - never hardcoded target joint names.
-Supports MetaHuman today; robots / SMPL-X / OpenSim tomorrow via new YAML.
+Supports robots / SMPL-X / OpenSim via YAML profiles.
 """
 
 from __future__ import annotations
@@ -25,9 +25,6 @@ from motion_engine.animation_clip import (
 from motion_engine.exceptions import MotionEngineError
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_METAHUMAN_MAPPING = Path("config/retarget_metahuman.yaml")
-
 
 class RetargetError(MotionEngineError):
     """Raised when retarget mapping or conversion fails."""
@@ -103,7 +100,7 @@ class Retargeter:
 
         Position/rotation curves are remapped by joint name. Missing source
         joints are skipped with a warning. Duplicate target joints (e.g.
-        wrist/hand mapping to the same MetaHuman bone) keep the last written
+        wrist/hand mapping to the same target bone) keep the last written
         source, preferring explicitly listed later entries.
         """
         if clip.n_frames <= 0:
@@ -183,14 +180,6 @@ class Retargeter:
             out.n_frames,
         )
         return out
-
-
-class MetaHumanRetargeter(Retargeter):
-    """Convenience retargeter for Motion Engine → MetaHuman UE5."""
-
-    def __init__(self, mapping_path: str | Path | None = None) -> None:
-        path = Path(mapping_path) if mapping_path else DEFAULT_METAHUMAN_MAPPING
-        super().__init__(RetargetProfile.from_yaml(path))
 
 
 def _stable_target_order(

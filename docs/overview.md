@@ -8,7 +8,6 @@ Gait labs produce dense marker / joint-center trajectories in MATLAB catalogs. R
 
 - a validated skeletal model  
 - interactive 3D review  
-- optional game-engine / digital-human export  
 
 ## Approach
 
@@ -16,7 +15,6 @@ Gait labs produce dense marker / joint-center trajectories in MATLAB catalogs. R
 2. **Map** markers → anatomical joints via `config/skeleton_definition.yaml`  
 3. **Measure** bone lengths as Euclidean distances in lab space  
 4. **Visualize** with a studio viewport (PyVista) inside AXYX Studio  
-5. **Export** (in progress) toward Unreal / MetaHuman  
 
 ## Units & coordinates
 
@@ -26,4 +24,4 @@ Dataset units are preserved from the capture lab (often millimeters; labeled Unk
 
 - Reconstruction rules are YAML, not buried in notebooks  
 - Studio and SDK share the same `SkeletonBuilder`  
-- Tests under `tests/` cover Studio services and Unreal certification scaffolding  
+- Tests under `tests/` cover Studio services and skeleton reconstruction  

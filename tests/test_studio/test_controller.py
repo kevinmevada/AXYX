@@ -37,7 +37,6 @@ class FakeView:
     ai: Any = None
     comparison: Any = None
     dual: bool = False
-    unreal: dict[str, Any] = field(default_factory=dict)
     cmp_frames: list[int] = field(default_factory=list)
 
     def show_welcome(self, visible: bool) -> None:
@@ -105,9 +104,6 @@ class FakeView:
 
     def set_dual_viewports(self, enabled: bool) -> None:
         self.dual = enabled
-
-    def set_inspector_unreal(self, fields: dict) -> None:
-        self.unreal = fields
 
 
 def test_controller_dataset_subject_session_flow(tmp_path) -> None:

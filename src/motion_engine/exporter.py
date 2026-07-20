@@ -1,10 +1,9 @@
 """
 Format-agnostic animation export interfaces.
 
-Unreal / Blender / Unity / OpenSim adapters live in dedicated packages and
-consume :class:`~motion_engine.animation_clip.AnimationClip` only.
+Blender / Unity / OpenSim adapters consume :class:`~motion_engine.animation_clip.AnimationClip` only.
 
-Do **not** import Unreal Engine from this module.
+Do **not** import DCC runtimes from this module.
 """
 
 from __future__ import annotations
@@ -72,7 +71,7 @@ class FbxExporter(AnimationExporter):
         self.validate_clip(clip)
         raise ExporterError(
             "FBX export requires an external encoder (Autodesk FBX SDK / "
-            "Blender). Use AnimationJsonExporter or UnrealExporter for now."
+            "Blender). Use AnimationJsonExporter for now."
         )
 
 
@@ -143,13 +142,6 @@ def write_export_sidecar(
     return out
 
 
-# Certification / convenience: Unreal adapter lives in the unreal package but
-# is re-exported here so ``from motion_engine.exporter import UnrealExporter`` works.
-from motion_engine.unreal.unreal_exporter import (  # noqa: E402
-    UnrealExporter,
-    UnrealExportPackage,
-)
-
 __all__ = [
     "ExporterError",
     "ExportFormat",
@@ -160,6 +152,4 @@ __all__ = [
     "UsdExporter",
     "create_exporter",
     "write_export_sidecar",
-    "UnrealExporter",
-    "UnrealExportPackage",
 ]

@@ -1,19 +1,12 @@
-"""Tests for comparison, heatmap, AI assist, and Unreal bridge."""
+"""Tests for comparison, heatmap, and AI assist."""
 
 from __future__ import annotations
-
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 from motion_engine.skeleton import Joint, Pose, Skeleton
 from motion_engine.studio.models.session_model import SessionModel
-from motion_engine.studio.renderers.unreal_bridge import (
-    InMemoryUnrealBridge,
-    create_unreal_bridge,
-)
-from motion_engine.studio.renderers.unreal_renderer import UnrealRenderer
 from motion_engine.studio.services.ai_assist_service import AiAssistService
 from motion_engine.studio.services.comparison_service import ComparisonService
 from motion_engine.studio.services.heatmap_service import HeatmapService
@@ -90,22 +83,3 @@ def test_ai_assist_flags_missing_metrics() -> None:
     codes = {f.code for f in report.findings}
     assert "missing_clinical_metrics" in codes
     assert "zero_velocity" in codes or "insufficient_frames" in codes
-
-
-def test_inmemory_unreal_bridge_and_renderer(tmp_path: Path) -> None:
-    bridge = InMemoryUnrealBridge()
-    assert bridge.connect() is True
-    renderer = UnrealRenderer()
-    renderer.attach_bridge(bridge)
-    renderer.initialize(object())
-    sk = _skeleton()
-    renderer.load_animation(sk, frame=1)
-    renderer.seek(2)
-    renderer.play()
-    renderer.pause()
-    assert any(c.op == "load_animation" for c in bridge.commands)
-
-    file_bridge = create_unreal_bridge("file", queue_dir=tmp_path / "q")
-    assert file_bridge.connect() is True
-    file_bridge.load_animation(sk, frame=0)
-    assert list((tmp_path / "q").glob("cmd_*.json"))

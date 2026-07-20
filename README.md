@@ -1,6 +1,6 @@
 # AXYX
 
-**AXYX** is a research platform for clinical gait motion capture: ingest Vicon-style MATLAB sessions, reconstruct a full-body skeleton from markers, visualize playback in a scientific 3D viewport, and prepare animation for downstream engines (e.g. Unreal / MetaHuman).
+**AXYX** is a research platform for clinical gait motion capture: ingest Vicon-style MATLAB sessions, reconstruct a full-body skeleton from markers, and visualize playback as a metallic procedural stick figure in a scientific 3D viewport.
 
 | | |
 |---|---|
@@ -17,7 +17,7 @@
 1. **Reproducible reconstruction** — marker → joint → bone graph driven by YAML, not ad-hoc scripts  
 2. **Data fidelity** — joint positions and bone lengths derived only from the dataset  
 3. **Interactive analysis** — subject/session browser, timeline playback, studio viewport  
-4. **Export path** — scaffolding toward Unreal / MetaHuman pipelines  
+4. **Interactive analysis** — subject/session browser, timeline playback, studio viewport  
 
 ---
 
@@ -37,8 +37,7 @@ axyx/                          # git repo name (folder may still be V_ locally)
 │   ├── skeleton_definition.yaml
 │   ├── bone_constraints.yaml
 │   ├── coordinate_system.yaml
-│   ├── subject_cohorts.yaml
-│   └── unreal_config.yaml …
+│   └── subject_cohorts.yaml …
 │
 ├── data/
 │   ├── raw/                   # original MATLAB captures
@@ -124,7 +123,7 @@ venv311\Scripts\python.exe -m pytest tests -q
 | `motion_engine` | Domain models, MATLAB I/O, skeleton, animation, camera, renderer |
 | AXYX Studio | Research UI — Explorer · Viewport · Timeline |
 | PyVista / VTK | Real-time 3D scientific visualization |
-| YAML configs | Skeleton topology, constraints, Unreal mapping |
+| YAML configs | Skeleton topology and constraints |
 
 ---
 
@@ -145,7 +144,7 @@ If you use AXYX in academic work, please cite this repository (see `CITATION.cff
 
 ## Status
 
-Active research / engineering prototype. Viewport and Studio UI are demonstration-ready; Unreal export remains under active development.
+Active research / engineering prototype. Viewport and Studio UI are demonstration-ready.
 
 ---
 

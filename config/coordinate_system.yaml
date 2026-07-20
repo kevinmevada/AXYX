@@ -9,26 +9,21 @@ description: >
 
 units: Unknown
 
-# Canonical internal trajectory layout after normalization.
-internal_layout: "N,3"   # frames x XYZ
+internal_layout: "N,3"
 
 supported_layouts:
   - "N,3"
   - "3,N"
 
-# Axis semantics are documentary only until calibrated against lab notes.
 axes:
   x: unknown
   y: unknown
   z: unknown
 
-# Future remapping targets (not applied in this phase).
 export_presets:
   opensim:
     note: TODO - map lab -> OpenSim ground frame
   bvh:
     note: TODO - map lab -> BVH Y-up
-  unreal:
-    note: TODO - map lab -> Unreal Z-up left-handed
   omniverse:
     note: TODO - map lab -> USD/Omniverse stage frame

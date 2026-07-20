@@ -404,7 +404,6 @@ class PyVistaRenderer(Renderer):
             self._setup_lighting()
         else:
             self._plotter.remove_all_lights()
-            self._plotter.enable_lightkit()
 
     def render(self) -> None:
         if self._plotter is None:
@@ -516,7 +515,6 @@ class PyVistaRenderer(Renderer):
         """Professional three-point studio lighting (key / fill / rim + ambient)."""
         assert self._plotter is not None
         self._plotter.remove_all_lights()
-        # Key - upper-left warm white (reads gold + black metal)
         key = self._pv.Light(
             position=(-1.6, -1.1, 2.4),
             focal_point=(0.0, 0.0, 0.55),
@@ -524,7 +522,6 @@ class PyVistaRenderer(Renderer):
             intensity=1.35,
             positional=False,
         )
-        # Fill - front-right cool
         fill = self._pv.Light(
             position=(1.4, 0.9, 1.5),
             focal_point=(0.0, 0.0, 0.5),
@@ -532,7 +529,6 @@ class PyVistaRenderer(Renderer):
             intensity=0.50,
             positional=False,
         )
-        # Rim - behind subject for silhouette on the white floor
         rim = self._pv.Light(
             position=(0.15, 1.8, 1.2),
             focal_point=(0.0, 0.0, 0.65),
@@ -543,7 +539,6 @@ class PyVistaRenderer(Renderer):
         ambient = self._pv.Light(light_type="headlight", intensity=0.40)
         for light in (key, fill, rim, ambient):
             self._plotter.add_light(light)
-        # Soft contact shadow is drawn as geometry - disable hard shadow maps.
         try:
             self._plotter.disable_shadows()
         except Exception:
