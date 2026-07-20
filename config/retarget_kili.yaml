@@ -1,0 +1,60 @@
+# Motion Skeleton → Kili (UE5 MetaHuman-style) joint mapping.
+# Never hardcode these names in Python — edit this file instead.
+
+schema_version: "1.0.0"
+name: clinical_gait_to_kili
+source_skeleton: clinical_gait_plugin_gait
+target_skeleton: kili_ue5
+description: >
+  Maps Plug-in Gait Motion Engine joints onto the Kili digital-human
+  skeleton exported from Unreal (MetaHuman UE5 naming).
+
+root_joint:
+  source: Pelvis
+  target: pelvis
+
+joints:
+  Pelvis: pelvis
+  Thorax: spine_03
+  Neck: neck_01
+  Head: head
+  LShoulder: clavicle_l
+  RShoulder: clavicle_r
+  LElbow: lowerarm_l
+  RElbow: lowerarm_r
+  LWrist: hand_l
+  RWrist: hand_r
+  LHand: hand_l
+  RHand: hand_r
+  LHip: thigh_l
+  RHip: thigh_r
+  LKnee: calf_l
+  RKnee: calf_r
+  LAnkle: foot_l
+  RAnkle: foot_r
+  LFoot: ball_l
+  RFoot: ball_r
+
+# Optional intermediate bones filled by position interpolation / look-at.
+inferred_bones:
+  spine_01: {from: pelvis, to: spine_03, t: 0.33}
+  spine_02: {from: pelvis, to: spine_03, t: 0.66}
+  spine_04: {from: spine_03, to: neck_01, t: 0.5}
+  spine_05: {from: spine_03, to: neck_01, t: 0.85}
+  neck_02: {from: neck_01, to: head, t: 0.5}
+  upperarm_l: {from: clavicle_l, to: lowerarm_l, t: 0.05}
+  upperarm_r: {from: clavicle_r, to: lowerarm_r, t: 0.05}
+
+chains:
+  spine: [Pelvis, Thorax, Neck, Head]
+  left_arm: [LShoulder, LElbow, LWrist, LHand]
+  right_arm: [RShoulder, RElbow, RWrist, RHand]
+  left_leg: [LHip, LKnee, LAnkle, LFoot]
+  right_leg: [RHip, RKnee, RAnkle, RFoot]
+
+required_joints: [Pelvis, Thorax, Neck, Head, LHip, RHip, LKnee, RKnee, LAnkle, RAnkle]
+
+notes:
+  - Finger / face / corrective bones stay in bind pose.
+  - Drive rotations are derived from joint positions (look-at), not raw mocap quats.
+  - Twists and correctives are not animated in Phase 2 viewport.

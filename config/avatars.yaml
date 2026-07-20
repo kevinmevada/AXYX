@@ -1,0 +1,28 @@
+# Avatar registry — Studio picks the default; metallic remains fallback.
+
+schema_version: "1.0.0"
+default_avatar: kili
+
+avatars:
+  metallic:
+    id: metallic
+    display_name: "Metallic Procedural Human"
+    backend: metallic
+    enabled: true
+    fallback: true
+    description: >
+      Original gold/black PBR stick-figure renderer. Always available.
+
+  kili:
+    id: kili
+    display_name: "Kili Digital Human"
+    backend: kili
+    enabled: true
+    fallback: false
+    asset_root: KILI
+    manifest: KILI/ASSET_MANIFEST.yaml
+    retarget: config/retarget_kili.yaml
+    default_lod: 1
+    animation_mode: rigid
+    description: >
+      Unreal-exported MetaHuman-quality body with PBR textures and GPU/CPU skinning.

@@ -1,0 +1,34 @@
+[
+  {
+    "source": "T_Body_BC_VT.TGA",
+    "cache": "KILI/cache/textures/body_bc.png",
+    "size": [
+      2048,
+      2048
+    ]
+  },
+  {
+    "source": "T_Body_N_VT.TGA",
+    "cache": "KILI/cache/textures/body_n.png",
+    "size": [
+      2048,
+      2048
+    ]
+  },
+  {
+    "source": "T_Body_SRMF_VT.TGA",
+    "cache": "KILI/cache/textures/body_srmf.png",
+    "size": [
+      2048,
+      2048
+    ]
+  },
+  {
+    "source": "T_Body_Scatter_VT.TGA",
+    "cache": "KILI/cache/textures/body_scatter.png",
+    "size": [
+      512,
+      512
+    ]
+  }
+]

@@ -1,0 +1,84 @@
+schema_version: "1.0.0"
+name: kili
+display_name: "Kili Digital Human"
+source:
+  body_fbx: KILI/SKM_Kili_BodyMesh.FBX
+  outfit_fbx: KILI/Kili_Outfits.FBX
+  exporter: "Export FBX meshes from Unreal"
+skeleton:
+  style: metahuman_ue5
+  bone_count: 342
+  hierarchy_cache: KILI/cache/skeleton.json
+  drive_bones:
+    - root
+    - pelvis
+    - spine_01
+    - spine_02
+    - spine_03
+    - spine_04
+    - spine_05
+    - neck_01
+    - neck_02
+    - head
+    - clavicle_l
+    - upperarm_l
+    - lowerarm_l
+    - hand_l
+    - clavicle_r
+    - upperarm_r
+    - lowerarm_r
+    - hand_r
+    - thigh_l
+    - calf_l
+    - foot_l
+    - ball_l
+    - thigh_r
+    - calf_r
+    - foot_r
+    - ball_r
+meshes:
+  default_lod: 1
+  body_lods:
+    - lod: 0
+      cache: KILI/cache/body_lod0.npz
+      vertices: 25328
+      triangles: 47392
+    - lod: 1
+      cache: KILI/cache/body_lod1.npz
+      vertices: 6745
+      triangles: 11843
+    - lod: 2
+      cache: KILI/cache/body_lod2.npz
+      vertices: 3310
+      triangles: 5468
+    - lod: 3
+      cache: KILI/cache/body_lod3.npz
+      vertices: 948
+      triangles: 1478
+materials:
+  pbr:
+    base_color: T_Body_BC_VT.TGA
+    normal: T_Body_N_VT.TGA
+    srmf: T_Body_SRMF_VT.TGA
+    scatter: T_Body_Scatter_VT.TGA
+    srmf_packing: "Specular / Roughness / Metallic / AO (packed)"
+  runtime_textures:
+    - KILI/cache/textures/body_bc.png
+    - KILI/cache/textures/body_n.png
+    - KILI/cache/textures/body_srmf.png
+    - KILI/cache/textures/body_scatter.png
+features:
+  skinning: true
+  lods: true
+  blend_shapes: false
+  hair: false
+  physics_assets: false
+  clothing_mesh: true
+  cloth_simulation: false
+  facial_morphs: false
+notes:
+  - "No morph targets in exported FBX — idle face morphs unavailable."
+  - "No separate hair strand assets."
+  - "No Unreal PhysicsAsset — secondary soft-body not present in data."
+  - "Outfit FBX is clothing geometry skinned to the same UE5 hierarchy."
+  - "Metallic procedural avatar remains the fallback renderer."

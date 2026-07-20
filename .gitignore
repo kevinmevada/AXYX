@@ -19,6 +19,15 @@ venv311/
 .env
 .venv/
 
+# KILI raw Unreal exports (large); keep manifests + processed cache optionally local
+KILI/*.FBX
+KILI/*.fbx
+KILI/*.TGA
+KILI/*.tga
+KILI/cache/textures/
+KILI/cache/*.npz
+KILI/cache/_*.json
+
 # IDE / OS
 .idea/
 .vscode/
