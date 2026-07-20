@@ -149,6 +149,3 @@ Active research / engineering prototype. Viewport and Studio UI are demonstratio
 
 ---
 
-## License
-
-Add a license before public release (e.g. MIT or Apache-2.0).
