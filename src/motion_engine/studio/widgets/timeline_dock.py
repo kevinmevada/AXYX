@@ -112,7 +112,7 @@ class TimelineDock(QWidget):
         self._slider.setObjectName("TimelineScrubber")
         self._slider.setMinimum(0)
         self._slider.setMaximum(0)
-        self._slider.setFixedHeight(18)
+        self._slider.setFixedHeight(28)
         self._slider.setToolTip("Scrub timeline")
         self._slider.sliderPressed.connect(self._on_press)
         self._slider.sliderMoved.connect(self._on_moved)

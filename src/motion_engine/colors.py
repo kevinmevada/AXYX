@@ -47,27 +47,37 @@ class Theme:
     fog: ColorRGB
 
 
-# Premium black-metal / gold / white-floor studio look.
+# Light photography studio — pale floor, graphite bones, red joint accents.
+_FLOOR: ColorRGB = _hex("F4F4F6")
+_FLOOR_WARM: ColorRGB = _hex("E6E7EA")
+_WALL: ColorRGB = _hex("EEEEEF")
+_GRAPHITE: ColorRGB = _hex("3A3D42")
+_GRAPHITE_HI: ColorRGB = _hex("55585E")
+_JOINT_RED: ColorRGB = _hex("E8443A")
+_GRID: ColorRGB = _hex("C8CAD0")
+_GRID_MINOR: ColorRGB = _hex("D8DAE0")
+_ACCENT: ColorRGB = _hex("4F8CFF")
+_INK: ColorRGB = _hex("2C2E32")
+
 STUDIO_THEME: Final[Theme] = Theme(
     name="studio",
-    # Soft charcoal void - lets the white floor and gold nodes read clearly.
-    background=_hex("2A2F38"),
-    background_top=_hex("1C2026"),
-    ground=_hex("F4F5F7"),
-    grid=_hex("C8CCD2"),
-    grid_minor=_hex("DDE0E4"),
-    bone=_hex("2E3238"),
-    bone_highlight=_hex("4A5058"),
-    joint=_hex("E0B429"),
-    joint_highlight=_hex("F5D76E"),
-    label=_hex("F4F5F7"),
-    axis_x=_hex("C9A227"),
-    axis_y=(0.35, 0.72, 0.48),
-    axis_z=_hex("4F8CFF"),
-    hud_text=_hex("F4F5F7"),
-    selected=_hex("4F8CFF"),
-    floor_accent=_hex("E8EAED"),
-    fog=_hex("242830"),
+    background=_WALL,
+    background_top=_hex("F7F7F8"),
+    ground=_FLOOR,
+    grid=_GRID,
+    grid_minor=_GRID_MINOR,
+    bone=_GRAPHITE,
+    bone_highlight=_GRAPHITE_HI,
+    joint=_JOINT_RED,
+    joint_highlight=_hex("FF6B5E"),
+    label=_INK,
+    axis_x=_JOINT_RED,
+    axis_y=_hex("8A8E96"),
+    axis_z=_ACCENT,
+    hud_text=_INK,
+    selected=_ACCENT,
+    floor_accent=_FLOOR_WARM,
+    fog=_WALL,
 )
 
 DARK_THEME: Final[Theme] = Theme(

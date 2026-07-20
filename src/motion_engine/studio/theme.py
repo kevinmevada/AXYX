@@ -30,9 +30,12 @@ class StudioColors:
     surface_raised: str = "#FFFFFF"
     surface_sunken: str = "#E8E8ED"
     surface_overlay: str = "#F0F0F3"
-    glass: str = "#F5F5F7"
-    glass_border: str = "#E5E5EA"
-    control: str = "#FCFCFC"
+    glass: str = "rgba(255, 255, 255, 0.55)"
+    glass_strong: str = "rgba(255, 255, 255, 0.72)"
+    glass_subtle: str = "rgba(255, 255, 255, 0.38)"
+    glass_border: str = "rgba(255, 255, 255, 0.9)"
+    glass_edge: str = "rgba(209, 209, 214, 0.55)"
+    control: str = "rgba(255, 255, 255, 0.6)"
 
     border: str = "#E5E5EA"
     border_subtle: str = "#ECECEF"
@@ -65,7 +68,7 @@ class StudioColors:
     focus_ring: str = "#4F8CFF"
     shadow: str = "#000000"
     overlay_scrim: str = "#1D1D1F"
-    viewport_void: str = "#1C2026"
+    viewport_void: str = "#EEEEEF"
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,7 +176,8 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
         outline: none;
     }}
     QMainWindow, QDialog {{
-        background-color: {c.background};
+        background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1,
+            stop:0 #F4F4F6, stop:0.55 #EAEAEE, stop:1 #E2E2E7);
     }}
     QWidget {{
         background-color: transparent;
@@ -181,29 +185,32 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
     }}
     QWidget#Workspace,
     QWidget#WelcomeRoot {{
-        background-color: {c.background};
+        background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1,
+            stop:0 #F4F4F6, stop:0.55 #EAEAEE, stop:1 #E2E2E7);
     }}
     QWidget#LoadingOverlay {{
         background-color: {c.overlay_scrim};
     }}
     QWidget#CommandBar {{
-        background-color: {c.surface};
+        background: {c.glass_strong};
         border: none;
-        border-bottom: 1px solid {c.border_subtle};
+        border-bottom: 1px solid {c.glass_edge};
     }}
     QWidget#ViewportStage {{
         background-color: {c.viewport_void};
-        border: none;
+        border: 1px solid {c.glass_edge};
         border-radius: {r.xl}px;
     }}
     QWidget#TimelineDock {{
-        background-color: {c.surface_raised};
-        border: 1px solid {c.border_subtle};
+        background: {c.glass_strong};
+        border: 1px solid {c.glass_edge};
+        border-top: 1px solid {c.glass_border};
         border-radius: {r.md}px;
     }}
     QWidget#ViewportToolbar {{
-        background: rgba(255, 255, 255, 0.78);
-        border: 1px solid {c.border_subtle};
+        background: {c.glass_strong};
+        border: 1px solid {c.glass_edge};
+        border-top: 1px solid {c.glass_border};
         border-radius: {r.lg}px;
         padding: 4px 8px;
     }}
@@ -217,8 +224,9 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
 
     QFrame#Sidebar,
     QFrame#InspectorPanel {{
-        background-color: {c.surface};
-        border: 1px solid {c.border_subtle};
+        background: {c.glass};
+        border: 1px solid {c.glass_edge};
+        border-top: 1px solid {c.glass_border};
         border-radius: {r.xl}px;
     }}
     QFrame#CenterPanel {{
@@ -227,8 +235,9 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
     }}
     QFrame#Card,
     QFrame#InspectorCard {{
-        background-color: {c.surface_raised};
-        border: 1px solid {c.border_subtle};
+        background: {c.glass_strong};
+        border: 1px solid {c.glass_edge};
+        border-top: 1px solid {c.glass_border};
         border-radius: {r.lg}px;
     }}
     QFrame#Divider {{
@@ -256,8 +265,8 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
         min-height: 100px;
     }}
     QGroupBox {{
-        background: {c.surface_raised};
-        border: 1px solid {c.border_subtle};
+        background: {c.glass_strong};
+        border: 1px solid {c.glass_edge};
         border-radius: {r.lg}px;
         margin-top: {s.md}px;
         padding: {s.md}px;
@@ -348,7 +357,7 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
 
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {{
         background: {c.control};
-        border: 1px solid {c.border};
+        border: 1px solid {c.glass_edge};
         border-radius: {r.md}px;
         padding: 10px {s.md}px;
         selection-background-color: {c.accent};
@@ -357,6 +366,7 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
     }}
     QLineEdit:hover, QComboBox:hover {{
         border-color: {c.border_strong};
+        background: {c.glass_strong};
     }}
     QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {{
         border: 2px solid {c.focus_ring};
@@ -450,14 +460,14 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
 
     QPushButton {{
         background: {c.control};
-        border: 1px solid {c.border};
+        border: 1px solid {c.glass_edge};
         border-radius: {r.md}px;
         padding: 10px 18px;
         font-weight: 600;
         color: {c.text_primary};
     }}
     QPushButton:hover {{
-        background: {c.surface_raised};
+        background: {c.glass_strong};
         border-color: {c.border_strong};
     }}
     QPushButton:pressed {{
@@ -544,14 +554,14 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
 
     QToolButton {{
         background: {c.control};
-        border: 1px solid {c.border};
+        border: 1px solid {c.glass_edge};
         border-radius: {r.md}px;
         padding: 8px 12px;
         font-weight: 600;
         color: {c.text_primary};
     }}
     QToolButton:hover {{
-        background: {c.surface_raised};
+        background: {c.glass_strong};
         border-color: {c.accent_border};
     }}
     QToolButton:checked, QToolButton:pressed {{
@@ -591,13 +601,13 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
     }}
     QToolButton#IconChrome {{
         background: {c.control};
-        border: 1px solid {c.border};
+        border: 1px solid {c.glass_edge};
         padding: 4px 8px;
         border-radius: {r.md}px;
         max-height: 28px;
     }}
     QToolButton#IconChrome:hover {{
-        background: {c.surface_raised};
+        background: {c.glass_strong};
         border-color: {c.accent_border};
     }}
     QToolButton#IconChrome:checked {{
@@ -607,7 +617,7 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
     }}
 
     QToolBar {{
-        background: {c.surface};
+        background: {c.glass_subtle};
         border: none;
         spacing: {s.sm}px;
         padding: {s.xs}px {s.sm}px;
@@ -656,8 +666,8 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
         color: {c.text_primary};
     }}
     QMenu {{
-        background: {c.surface_raised};
-        border: 1px solid {c.border};
+        background: {c.glass_strong};
+        border: 1px solid {c.glass_edge};
         border-radius: {r.lg}px;
         padding: 8px;
     }}
@@ -716,8 +726,8 @@ def build_stylesheet(theme: StudioTheme | None = None) -> str:
     }}
 
     QStatusBar {{
-        background: {c.surface};
-        border-top: 1px solid {c.border_subtle};
+        background: {c.glass_strong};
+        border-top: 1px solid {c.glass_edge};
         color: {c.text_primary};
         font-size: {t.size_xs}px;
         padding: 2px {s.sm}px;

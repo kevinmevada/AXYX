@@ -98,7 +98,7 @@ class StudioController(QObject):
         self._last_tick = time.perf_counter()
 
         self._timer = QTimer(self)
-        self._timer.setInterval(16)
+        self._timer.setInterval(8)  # 120 Hz playback clock
         self._timer.timeout.connect(self._on_tick)
         self._timer.start()
 

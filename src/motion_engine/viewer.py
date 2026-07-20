@@ -36,14 +36,47 @@ from motion_engine.timeline import Timeline
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_JOINT_RADIUS_RATIO: float = 0.028
+DEFAULT_JOINT_RADIUS_RATIO: float = 0.036
 DEFAULT_GROUND_PADDING_RATIO: float = 1.8
 DEFAULT_AXES_LENGTH_RATIO: float = 0.22
 DEFAULT_GRID_DIVISIONS: int = 24
-MIN_JOINT_RADIUS: float = 18.0
-MAX_JOINT_RADIUS: float = 55.0
+MIN_JOINT_RADIUS: float = 26.0
+MAX_JOINT_RADIUS: float = 72.0
+# Keep joint spheres / bone shafts from sinking through the studio floor.
+FLOOR_CLEARANCE_RATIO: float = 1.15
+FLOOR_CLEARANCE_PAD: float = 6.0
 TARGET_RENDER_FPS: int = 120
 RENDER_TICK_MS: int = max(1, int(1000 / TARGET_RENDER_FPS))
+
+# Relative joint scales — hips/knees/spine larger, extremities smaller.
+_JOINT_SIZE_SCALE: dict[str, float] = {
+    "pelvis": 1.45,
+    "hip": 1.40,
+    "knee": 1.35,
+    "ankle": 1.15,
+    "foot": 0.95,
+    "toe": 0.80,
+    "spine": 1.35,
+    "thorax": 1.30,
+    "chest": 1.30,
+    "c7": 1.20,
+    "neck": 1.15,
+    "head": 1.30,
+    "shoulder": 1.25,
+    "clavicle": 1.10,
+    "elbow": 1.20,
+    "wrist": 1.05,
+    "hand": 0.85,
+    "finger": 0.75,
+}
+
+
+def _joint_radius_scale(joint_name: str) -> float:
+    key = joint_name.lower()
+    for token, scale in _JOINT_SIZE_SCALE.items():
+        if token in key:
+            return scale
+    return 1.15
 
 
 class ViewerError(MotionEngineError):
@@ -210,10 +243,9 @@ class SkeletonViewer(Viewer):
         if frame_index is not None:
             self.timeline.seek(frame_index)
         frame_changed = self.timeline.current_frame != self._last_drawn_frame
-        camera_dirty = self.camera.is_dirty()
-        if frame_changed or camera_dirty:
-            pose = self.skeleton.get_pose(self.timeline.current_frame)
-            self._draw_frame(pose)
+        pose = self.skeleton.get_pose(self.timeline.current_frame)
+        self._draw_frame(pose)
+        if frame_changed:
             self._last_drawn_frame = self.timeline.current_frame
         self.renderer.render()
         if self._is_recording and isinstance(self.renderer, PyVistaRenderer):
@@ -225,6 +257,10 @@ class SkeletonViewer(Viewer):
         if frame_changed:
             self._sync_playback_widgets()
         self._refresh_status()
+
+    def refresh_ambient(self) -> None:
+        """No-op — ambient re-renders were the main idle lag source."""
+        return
 
     def next_frame(self) -> None:
         self.playback.reverse = False
@@ -344,36 +380,31 @@ class SkeletonViewer(Viewer):
             self._floor_z = 0.0
             self._ground_origin = (0.0, 0.0, 0.0)
             self.camera.set_model_bounds(BoundingBox())
+            self._joint_radius = float(MIN_JOINT_RADIUS)
+            return
+
+        arr = np.vstack(all_points)
+        min_joint_z = float(arr[:, 2].min())
+        horiz = arr[:, :2]
+        horiz_mid = 0.5 * (horiz.min(axis=0) + horiz.max(axis=0))
+        horiz_span = float(np.max(horiz.max(axis=0) - horiz.min(axis=0)))
+        self._ground_span = max(horiz_span * 1.55, 2600.0)
+        pose0 = [
+            np.asarray(p, dtype=float)
+            for p in self.skeleton.poses[0].joint_positions.values()
+            if np.all(np.isfinite(p))
+        ]
+        if pose0:
+            p0 = np.vstack(pose0)
+            self._bbox_center = 0.5 * (p0.min(axis=0) + p0.max(axis=0))
+            self._bbox_extent = float(np.max(p0.max(axis=0) - p0.min(axis=0)) * 0.5)
+            body_bounds = BoundingBox.from_points(p0)
         else:
-            arr = np.vstack(all_points)
-            self._floor_z = float(arr[:, 2].min())
-            horiz = arr[:, :2]
-            horiz_mid = 0.5 * (horiz.min(axis=0) + horiz.max(axis=0))
-            horiz_span = float(np.max(horiz.max(axis=0) - horiz.min(axis=0)))
-            self._ground_span = max(horiz_span * 1.55, 2600.0)
-            self._ground_origin = (
-                float(horiz_mid[0]),
-                float(horiz_mid[1]),
-                float(self._floor_z),
-            )
-            pose0 = [
-                np.asarray(p, dtype=float)
-                for p in self.skeleton.poses[0].joint_positions.values()
-                if np.all(np.isfinite(p))
-            ]
-            if pose0:
-                p0 = np.vstack(pose0)
-                self._bbox_center = 0.5 * (p0.min(axis=0) + p0.max(axis=0))
-                self._bbox_extent = float(
-                    np.max(p0.max(axis=0) - p0.min(axis=0)) * 0.5
-                )
-                body_bounds = BoundingBox.from_points(p0)
-            else:
-                self._bbox_center = 0.5 * (arr.min(axis=0) + arr.max(axis=0))
-                self._bbox_extent = 1000.0
-                body_bounds = BoundingBox.from_points(arr)
-            self._bbox_extent = max(self._bbox_extent, 250.0)
-            self.camera.set_model_bounds(body_bounds)
+            self._bbox_center = 0.5 * (arr.min(axis=0) + arr.max(axis=0))
+            self._bbox_extent = 1000.0
+            body_bounds = BoundingBox.from_points(arr)
+        self._bbox_extent = max(self._bbox_extent, 250.0)
+        self.camera.set_model_bounds(body_bounds)
 
         self._joint_radius = float(
             np.clip(
@@ -381,6 +412,14 @@ class SkeletonViewer(Viewer):
                 MIN_JOINT_RADIUS,
                 MAX_JOINT_RADIUS,
             )
+        )
+        # Drop the floor under the thickest near-ground joint so spheres don't clip.
+        clearance = self._joint_radius * FLOOR_CLEARANCE_RATIO + FLOOR_CLEARANCE_PAD
+        self._floor_z = min_joint_z - clearance
+        self._ground_origin = (
+            float(horiz_mid[0]),
+            float(horiz_mid[1]),
+            float(self._floor_z),
         )
 
     def _draw_frame(self, pose: Pose) -> None:
@@ -450,7 +489,7 @@ class SkeletonViewer(Viewer):
                 )
                 self.renderer.draw_sphere(
                     position,
-                    self._joint_radius,
+                    self._joint_radius * _joint_radius_scale(joint_name),
                     color,
                     name=f"joint:{joint_name}",
                 )
@@ -459,9 +498,8 @@ class SkeletonViewer(Viewer):
                         joint_name, position, self.theme.label
                     )
 
-        if self.camera.is_dirty():
-            self.renderer.set_camera(self.camera.get_state())
-            self.camera.clear_dirty()
+        self.renderer.set_camera(self.camera.get_state())
+        self.camera.clear_dirty()
 
     def _refresh_status(self) -> None:
         if self._status_label is None or self.skeleton is None:
@@ -662,7 +700,7 @@ class SkeletonViewer(Viewer):
             form.addWidget(box)
 
         add_toggle("Show Floor", self.scene.show_ground, self.toggle_ground)
-        add_toggle("Show Grid", self.scene.show_grid, self.toggle_grid)
+        add_toggle("Alignment Lines", self.scene.show_grid, self.toggle_grid)
         add_toggle("Show Axes", self.scene.show_axes, self.toggle_axes)
         add_toggle("Show Joint Labels", self.show_joint_labels, self.toggle_joint_labels)
         add_toggle("Show Bone Labels", self.show_bone_labels, self.toggle_bone_labels)

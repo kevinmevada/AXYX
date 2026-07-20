@@ -26,13 +26,29 @@ from numpy.typing import NDArray
 Vec3 = tuple[float, float, float]
 FloatArray = NDArray[np.floating]
 
-DEFAULT_FOV_DEG: float = 42.0
+DEFAULT_FOV_DEG: float = 16.1
+"""Vertical FOV for an 85 mm lens on a full-frame sensor (24 mm tall)."""
+
+LENS_FOCAL_MM: float = 85.0
+LOOK_AT_HEIGHT_RATIO: float = 0.48
+"""Framing anchor — lower on the body so the horizon sits in the lower third."""
+
+EYE_HEIGHT_RATIO: float = 0.66
+"""Camera height above the floor plane."""
+
+CAMERA_YAW_BIAS_DEG: float = 12.0
+"""Default 12° orbit offset — subtle asymmetry, not dead-center."""
+
+FIT_MARGIN: float = 0.74
+"""Tighter framing — subject fills ~65% of the viewport height."""
+
+BREATH_SPEED: float = 0.32
+BREATH_AMPLITUDE_FACTOR: float = 0.0022
 DEFAULT_ANIMATION_SECONDS: float = 0.42
 MIN_ANIMATION_SECONDS: float = 0.32
 MAX_ANIMATION_SECONDS: float = 0.55
 FIT_DISTANCE_FACTOR: float = 2.65
 SIDE_DISTANCE_FACTOR: float = 2.75
-FIT_MARGIN: float = 1.18
 MIN_DISTANCE_RADIUS_FACTOR: float = 0.45
 MAX_DISTANCE_RADIUS_FACTOR: float = 35.0
 ORBIT_SENSITIVITY: float = 0.0042
@@ -45,7 +61,7 @@ FLOOR_CLEARANCE_FACTOR: float = 0.04
 WORLD_UP: Vec3 = (0.0, 0.0, 1.0)
 ORBIT_VIEW_COUNT: int = 4
 ORBIT_AZIMUTH_STEP: float = 2.0 * math.pi / ORBIT_VIEW_COUNT
-ORBIT_ELEVATION_FACTOR: float = 0.08
+ORBIT_ELEVATION_FACTOR: float = 0.055
 ORBIT_VIEW_NAMES: tuple[str, ...] = ("Front", "Right", "Back", "Left")
 
 
@@ -256,6 +272,7 @@ class CameraController:
     _min_distance: float = field(default=50.0, init=False, repr=False)
     _max_distance: float = field(default=50000.0, init=False, repr=False)
     _orbit_index: int = field(default=0, init=False, repr=False)
+    _breath_phase: float = field(default=0.0, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.animation_seconds = float(
@@ -273,7 +290,7 @@ class CameraController:
         self.set_model_bounds(BoundingBox.from_points(points))
 
     def get_state(self) -> CameraState:
-        return self.state.copy()
+        return self._apply_breathing(self.state.copy())
 
     def set_state(self, state: CameraState, *, animate: bool = False) -> None:
         target = self._clamp_state_distance(state.copy())
@@ -296,7 +313,8 @@ class CameraController:
         return self._animation is not None and self._animation.active
 
     def update(self, dt: float | None = None) -> CameraState:
-        _ = dt
+        if dt is not None and dt > 0.0 and not self.is_animating():
+            self._breath_phase += dt * BREATH_SPEED
         if self._animation is None or not self._animation.active:
             return self.state
         sample, finished = self._animation.sample(time.perf_counter())
@@ -520,6 +538,34 @@ class CameraController:
         )
         self._dirty = True
 
+    def _subject_chest(self) -> Vec3:
+        """Framing anchor on the upper body (horizon in lower third)."""
+        floor_z = float(self.bounds.min_corner[2])
+        height = max(float(self.bounds.extents[2]), 1.0)
+        cx, cy, _ = self.bounds.center
+        anchor_z = floor_z + height * LOOK_AT_HEIGHT_RATIO
+        return (cx, cy, anchor_z)
+
+    def _camera_eye_height(self) -> float:
+        floor_z = float(self.bounds.min_corner[2])
+        height = max(float(self.bounds.extents[2]), 1.0)
+        return floor_z + height * EYE_HEIGHT_RATIO
+
+    def _apply_breathing(self, state: CameraState) -> CameraState:
+        """Imperceptible handheld drift — like an operator breathing."""
+        if self.is_animating():
+            return state
+        amp = max(self.bounds.radius * BREATH_AMPLITUDE_FACTOR, 0.35)
+        breath = math.sin(self._breath_phase) * amp
+        breath_y = math.cos(self._breath_phase * 0.73) * amp * 0.4
+        eye = np.asarray(state.eye, dtype=float) + np.array(
+            [breath * 0.25, breath_y, breath * 0.12], dtype=float
+        )
+        look = np.asarray(state.look_at, dtype=float) + np.array(
+            [breath * 0.08, breath_y * 0.18, 0.0], dtype=float
+        )
+        return replace(state, eye=_as_vec3(eye), look_at=_as_vec3(look))
+
     def _go_to_orbit_index(self, *, animate: bool = True) -> None:
         target = self._pose_for_orbit_index(self._orbit_index)
         if animate:
@@ -531,6 +577,7 @@ class CameraController:
         """Return a full-body framed pose for one of four 90° views."""
         slot = int(index) % ORBIT_VIEW_COUNT
         azimuth = slot * ORBIT_AZIMUTH_STEP - (math.pi / 2.0)
+        azimuth += math.radians(CAMERA_YAW_BIAS_DEG)
         elevation = ORBIT_ELEVATION_FACTOR
         # Horizontal orbit with slight elevation - never under the floor.
         direction = _normalize(
@@ -551,8 +598,8 @@ class CameraController:
         direction: Sequence[float],
         view_name: str,
     ) -> CameraState:
-        """Center subject and compute distance so head/feet never clip."""
-        look = self.bounds.center
+        """Center subject at chest height and compute distance so head/feet never clip."""
+        look = self._subject_chest()
         extents = self.bounds.extents
         height = max(float(extents[2]), 1.0)
         width = max(float(extents[0]), float(extents[1]), 1.0)
@@ -566,10 +613,11 @@ class CameraController:
         dist = max(dist_h, dist_w, self.bounds.radius * FIT_DISTANCE_FACTOR * 0.85)
         dist = float(np.clip(dist, self._min_distance, self._max_distance))
         direction_n = _normalize(direction)
+        eye_z = self._camera_eye_height()
         eye = (
             look[0] + direction_n[0] * dist,
             look[1] + direction_n[1] * dist,
-            look[2] + direction_n[2] * dist,
+            eye_z,
         )
         near, far = self._clip_planes_for_distance(dist)
         state = CameraState(

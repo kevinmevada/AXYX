@@ -61,6 +61,7 @@ class ViewerCanvas(QFrame):
         self._drag_mode: str | None = None
         self._last_mouse = (0, 0)
         self._last_click_t = 0.0
+        self._last_camera_tick = time.perf_counter()
         self._camera_obs: list[tuple[Any, str, int]] = []
 
         self._title = QLabel("")
@@ -103,7 +104,7 @@ class ViewerCanvas(QFrame):
 
         self._camera_timer = QTimer(self)
         self._camera_timer.setTimerType(Qt.TimerType.PreciseTimer)
-        self._camera_timer.setInterval(16)
+        self._camera_timer.setInterval(8)  # 120 Hz — only renders when camera moves
         self._camera_timer.timeout.connect(self._tick_camera)
 
     def _wire_toolbar(self) -> None:
@@ -264,11 +265,14 @@ class ViewerCanvas(QFrame):
         _obs("MouseWheelBackwardEvent", on_wheel_backward)
 
     def _tick_camera(self) -> None:
-        """Advance smooth camera transitions without waiting on playback."""
+        """Advance camera transitions only — never idle-render."""
         if self._viewer is None or self._viewer.skeleton is None:
             return
+        now = time.perf_counter()
+        dt = now - self._last_camera_tick
+        self._last_camera_tick = now
         cam = self._viewer.camera
-        cam.update()
+        cam.update(dt)
         if cam.is_dirty() or cam.is_animating():
             try:
                 self._viewer.update_frame()

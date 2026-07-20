@@ -19,6 +19,12 @@ from typing import Any, Sequence
 import numpy as np
 from numpy.typing import NDArray
 
+from motion_engine.bone_geometry import (
+    build_unit_bone_template,
+    merge_bone_meshes,
+    profile_for_bone,
+    transform_bone,
+)
 from motion_engine.camera import CameraState
 from motion_engine.colors import ColorRGB, DEFAULT_THEME, Theme
 from motion_engine.exceptions import MotionEngineError
@@ -29,20 +35,25 @@ logger = logging.getLogger(__name__)
 FloatArray = NDArray[np.floating[Any]]
 
 TARGET_RENDER_FPS: int = 120
-JOINT_SPHERE_RESOLUTION: int = 24
-BONE_TUBE_SIDES: int = 20
-FLOOR_RESOLUTION: int = 48
-GRID_MAJOR_STEP_RATIO: float = 0.10
-# Black metallic bones / golden metallic joints / matte white floor.
-BONE_METALLIC: float = 0.88
-BONE_ROUGHNESS: float = 0.32
-JOINT_METALLIC: float = 0.92
-JOINT_ROUGHNESS: float = 0.26
-FLOOR_METALLIC: float = 0.02
-FLOOR_ROUGHNESS: float = 0.78
-CONTACT_SHADOW_OPACITY: float = 0.16
-GRID_MAJOR_OPACITY: float = 0.28
-GRID_MINOR_OPACITY: float = 0.12
+JOINT_SPHERE_RESOLUTION: int = 14
+FLOOR_RESOLUTION: int = 1
+GRID_OPACITY: float = 0.16
+GRID_MINOR_OPACITY: float = 0.08
+# Graphite bones / glossy red joints — high metallic for brushed-metal read.
+BONE_METALLIC: float = 0.92
+BONE_ROUGHNESS: float = 0.22
+JOINT_METALLIC: float = 0.88
+JOINT_ROUGHNESS: float = 0.12
+FLOOR_METALLIC: float = 0.08
+FLOOR_ROUGHNESS: float = 0.72
+FLOOR_SPECULAR: float = 0.08
+FOOT_SHADOW_OPACITY: float = 0.22
+BODY_SHADOW_OPACITY: float = 0.08
+CONTACT_SHADOW_RGB: tuple[float, float, float] = (0.42, 0.43, 0.46)
+# Thicker shafts — bones fill more of the figure silhouette.
+BONE_RADIUS_RATIO: float = 0.95
+BONE_RADIUS_MIN: float = 28.0
+VIGNETTE_STRENGTH: float = 0.10
 
 
 class RendererError(MotionEngineError):
@@ -270,9 +281,11 @@ class PyVistaRenderer(Renderer):
         self._off_screen = off_screen
         self._joint_pts: list[np.ndarray] = []
         self._joint_colors: list[ColorRGB] = []
+        self._joint_radii: list[float] = []
         self._joint_radius = 25.0
         self._bone_segs: list[tuple[np.ndarray, np.ndarray]] = []
         self._bone_colors: list[ColorRGB] = []
+        self._bone_seg_names: list[str] = []
         self._ground_args: tuple[float, ColorRGB, np.ndarray] | None = None
         self._grid_args: tuple[float, int, ColorRGB, np.ndarray] | None = None
         self._axes_args: tuple[np.ndarray, float] | None = None
@@ -283,17 +296,23 @@ class PyVistaRenderer(Renderer):
         self._actors: dict[str, Any] = {}
         self._env_sigs: dict[str, Any] = {}
         self._labels: list[tuple[str, Sequence[float], ColorRGB]] = []
-        self._bone_radius_scale = 0.42
         self._skeleton_sig: tuple[Any, ...] | None = None
         self._joint_mesh: Any | None = None
         self._bone_mesh: Any | None = None
-        self._bone_line_mesh: Any | None = None
-        self._bone_tube_mesh: Any | None = None
-        self._bone_tube_radius: float = 14.0
+        self._bone_unit_templates: list[np.ndarray] = []
+        self._bone_vertex_slices: list[tuple[int, int]] = []
+        self._bone_radial_scale: float = 14.0
         self._joint_template_pts: np.ndarray | None = None
         self._joint_template_faces: np.ndarray | None = None
         self._joint_points_per_sphere: int = 0
-        self._bone_segment_count: int = 0
+        self._floor_origin_z: float = 0.0
+        self._lab_bounds: tuple[float, float, float] | None = None
+        self._foot_positions: list[np.ndarray] = []
+        self._studio_lights: dict[str, Any] = {}
+        self._ground_span: float = 2000.0
+        self._shadow_sig: tuple[Any, ...] | None = None
+        self._vignette_ready = False
+        self._ibl_ready = False
 
     @property
     def plotter(self) -> Any:
@@ -327,8 +346,11 @@ class PyVistaRenderer(Renderer):
         """Clear per-frame draw queues (does not destroy GPU skeleton cache)."""
         self._joint_pts.clear()
         self._joint_colors.clear()
+        self._joint_radii.clear()
         self._bone_segs.clear()
         self._bone_colors.clear()
+        self._bone_seg_names.clear()
+        self._foot_positions.clear()
         self._labels.clear()
 
     def draw_sphere(
@@ -341,7 +363,11 @@ class PyVistaRenderer(Renderer):
     ) -> None:
         self._joint_pts.append(np.asarray(center, dtype=float))
         self._joint_colors.append(color)
-        self._joint_radius = radius
+        self._joint_radii.append(float(radius))
+        self._joint_radius = float(radius)
+        label = name.lower()
+        if "foot" in label:
+            self._foot_positions.append(np.asarray(center, dtype=float))
 
     def draw_line(
         self,
@@ -356,6 +382,7 @@ class PyVistaRenderer(Renderer):
             (np.asarray(start, dtype=float), np.asarray(end, dtype=float))
         )
         self._bone_colors.append(color)
+        self._bone_seg_names.append(name)
 
     def draw_ground(
         self,
@@ -388,12 +415,11 @@ class PyVistaRenderer(Renderer):
         self._pending_camera = camera
 
     def set_background(self, color: ColorRGB) -> None:
-        """Apply a subtle vertical studio gradient (top → bottom)."""
+        """Apply the dark studio void (RGB 12, 13, 15)."""
         if self._plotter is None:
             return
-        # Prefer theme top/bottom; ``color`` is the bottom stop when provided.
+        bottom = tuple(int(c * 255) for c in self.theme.background)
         top = tuple(int(c * 255) for c in self.theme.background_top)
-        bottom = tuple(int(c * 255) for c in color)
         self._plotter.set_background(bottom, top=top)
 
     def set_lighting_enabled(self, enabled: bool) -> None:
@@ -410,6 +436,7 @@ class PyVistaRenderer(Renderer):
             return
         self._flush_environment()
         self._flush_skeleton()
+        self._update_contact_shadows()
         if self._pending_camera is not None:
             self._apply_camera(self._pending_camera)
             self._pending_camera = None
@@ -440,13 +467,12 @@ class PyVistaRenderer(Renderer):
         self._skeleton_sig = None
         self._joint_mesh = None
         self._bone_mesh = None
-        self._bone_line_mesh = None
-        self._bone_tube_mesh = None
-        self._bone_tube_radius = 14.0
+        self._bone_unit_templates = []
+        self._bone_vertex_slices = []
+        self._bone_radial_scale = 14.0
         self._joint_template_pts = None
         self._joint_template_faces = None
         self._joint_points_per_sphere = 0
-        self._bone_segment_count = 0
         if self._plotter is not None and self._owns_plotter:
             try:
                 self._plotter.close()
@@ -457,19 +483,19 @@ class PyVistaRenderer(Renderer):
         self._actors.clear()
         self._env_sigs.clear()
         self._labels.clear()
+        self._lab_bounds = None
         self._env_built = False
 
     def _invalidate_skeleton_cache(self) -> None:
         self._skeleton_sig = None
         self._joint_mesh = None
         self._bone_mesh = None
-        self._bone_line_mesh = None
-        self._bone_tube_mesh = None
-        self._bone_tube_radius = 14.0
+        self._bone_unit_templates = []
+        self._bone_vertex_slices = []
+        self._bone_radial_scale = 14.0
         self._joint_template_pts = None
         self._joint_template_faces = None
         self._joint_points_per_sphere = 0
-        self._bone_segment_count = 0
         if self._plotter is None:
             return
         self._remove_actor("bones")
@@ -483,70 +509,145 @@ class PyVistaRenderer(Renderer):
         ren_win = self._plotter.ren_win
         if ren_win is not None:
             try:
-                ren_win.SetMultiSamples(8)
+                ren_win.SetMultiSamples(2)
             except Exception:
-                try:
-                    ren_win.SetMultiSamples(4)
-                except Exception:
-                    pass
+                pass
         try:
-            self._plotter.enable_anti_aliasing("msaa", multi_samples=8)
+            self._plotter.enable_anti_aliasing("fxaa")
         except Exception:
-            try:
-                self._plotter.enable_anti_aliasing("fxaa")
-            except Exception:
-                try:
-                    self._plotter.enable_anti_aliasing()
-                except Exception:
-                    pass
+            pass
         self.set_background(self.theme.background)
-        # Depth cueing is handled by lighting/silhouette - VTK fog uses camera
-        # distance units; tiny start/end values wash the entire scene to fog color.
+        self._setup_atmosphere()
+        self._setup_ibl()
+        self._ensure_vignette()
+
+    def _setup_atmosphere(self) -> None:
+        """Bright ambient fill for a light studio — no fog curtain."""
+        assert self._plotter is not None
+        renderer = self._plotter.renderer
         try:
-            renderer = self._plotter.renderer
             if hasattr(renderer, "SetUseFog"):
                 renderer.SetUseFog(False)
             elif hasattr(renderer, "UseFogOff"):
                 renderer.UseFogOff()
+            renderer.SetAmbient(0.28, 0.28, 0.29)
+            renderer.SetTwoSidedLighting(True)
         except Exception:
-            logger.debug("Fog toggle unsupported on this VTK build", exc_info=True)
+            logger.debug("Atmosphere setup skipped", exc_info=True)
+
+    def _setup_ibl(self) -> None:
+        """Bright studio equirectangular map for PBR metallics on a light floor."""
+        if self._ibl_ready or self._plotter is None:
+            return
+        try:
+            h, w = 96, 192
+            img = np.zeros((h, w, 3), dtype=np.uint8)
+            for y in range(h):
+                t = y / max(h - 1, 1)
+                top = np.array([247, 247, 248], dtype=float)
+                bot = np.array([230, 231, 234], dtype=float)
+                row = (1.0 - t) * top + t * bot
+                img[y, :] = np.clip(row, 0, 255).astype(np.uint8)
+            yy, xx = np.mgrid[0:h, 0:w]
+            key = np.exp(
+                -(((xx / w - 0.28) ** 2) / 0.05 + ((yy / h - 0.20) ** 2) / 0.04)
+            )
+            img = np.clip(
+                img.astype(float) + key[:, :, None] * np.array([18, 16, 12]),
+                0,
+                255,
+            ).astype(np.uint8)
+            tex = self._pv.numpy_to_texture(img)
+            self._plotter.set_environment_texture(tex, is_srgb=True)
+            self._ibl_ready = True
+        except Exception:
+            logger.debug("IBL environment texture unavailable", exc_info=True)
 
     def _setup_lighting(self) -> None:
-        """Professional three-point studio lighting (key / fill / rim + ambient)."""
+        """Soft upper-left key — light floor does most of the work."""
         assert self._plotter is not None
         self._plotter.remove_all_lights()
+        self._studio_lights.clear()
         key = self._pv.Light(
-            position=(-1.6, -1.1, 2.4),
+            position=(-1.5, -1.0, 2.6),
             focal_point=(0.0, 0.0, 0.55),
-            color=(1.0, 0.98, 0.94),
-            intensity=1.35,
-            positional=False,
-        )
-        fill = self._pv.Light(
-            position=(1.4, 0.9, 1.5),
-            focal_point=(0.0, 0.0, 0.5),
-            color=(0.88, 0.92, 1.0),
-            intensity=0.50,
-            positional=False,
-        )
-        rim = self._pv.Light(
-            position=(0.15, 1.8, 1.2),
-            focal_point=(0.0, 0.0, 0.65),
-            color=(1.0, 0.97, 0.92),
+            color=(1.0, 0.99, 0.97),
             intensity=0.48,
             positional=False,
         )
-        ambient = self._pv.Light(light_type="headlight", intensity=0.40)
-        for light in (key, fill, rim, ambient):
+        fill = self._pv.Light(
+            position=(1.2, -0.3, 1.5),
+            focal_point=(0.0, 0.0, 0.5),
+            color=(0.95, 0.96, 0.98),
+            intensity=0.22,
+            positional=False,
+        )
+        ambient = self._pv.Light(light_type="headlight", intensity=0.18)
+        for label, light in (
+            ("key", key),
+            ("fill", fill),
+            ("ambient", ambient),
+        ):
             self._plotter.add_light(light)
+            self._studio_lights[label] = light
         try:
             self._plotter.disable_shadows()
         except Exception:
             pass
 
     def _setup_environment(self) -> None:
-        # Environment is rebuilt when ground/grid args arrive.
         self._env_built = False
+
+    def _ensure_vignette(self) -> None:
+        """Screen-space radial darkening via a 2D image actor."""
+        if self._vignette_ready or self._plotter is None:
+            return
+        try:
+            from vtkmodules.vtkCommonCore import VTK_UNSIGNED_CHAR, vtkUnsignedCharArray
+            from vtkmodules.vtkCommonDataModel import vtkImageData
+            from vtkmodules.vtkRenderingCore import vtkActor2D, vtkImageMapper
+        except Exception:
+            logger.debug("Vignette VTK modules unavailable", exc_info=True)
+            return
+        try:
+            n = 256
+            yy, xx = np.mgrid[0:n, 0:n]
+            cx = cy = (n - 1) * 0.5
+            r = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2) / (0.55 * n)
+            alpha = np.clip((r - 0.42) / 0.58, 0.0, 1.0) * VIGNETTE_STRENGTH
+            rgba = np.zeros((n * n, 4), dtype=np.uint8)
+            rgba[:, 3] = (alpha.ravel() * 255.0).astype(np.uint8)
+
+            image = vtkImageData()
+            image.SetDimensions(n, n, 1)
+            image.AllocateScalars(VTK_UNSIGNED_CHAR, 4)
+            arr = vtkUnsignedCharArray()
+            arr.SetNumberOfComponents(4)
+            arr.SetNumberOfTuples(n * n)
+            for i in range(n * n):
+                arr.SetTuple4(i, 0, 0, 0, int(rgba[i, 3]))
+            image.GetPointData().SetScalars(arr)
+
+            mapper = vtkImageMapper()
+            mapper.SetInputData(image)
+            mapper.SetColorWindow(255.0)
+            mapper.SetColorLevel(127.5)
+            actor = vtkActor2D()
+            actor.SetMapper(mapper)
+            try:
+                coord = actor.GetPositionCoordinate()
+                coord.SetCoordinateSystemToNormalizedDisplay()
+                actor.SetPosition(0.0, 0.0)
+                coord2 = actor.GetPosition2Coordinate()
+                coord2.SetCoordinateSystemToNormalizedDisplay()
+                actor.SetPosition2(1.0, 1.0)
+            except Exception:
+                pass
+            self._plotter.renderer.AddActor2D(actor)
+            self._actors["vignette"] = actor
+            self._vignette_ready = True
+        except Exception:
+            logger.debug("Vignette overlay skipped", exc_info=True)
 
     def _apply_pbr(
         self,
@@ -556,6 +657,7 @@ class PyVistaRenderer(Renderer):
         roughness: float,
         specular: float = 0.18,
         specular_power: float = 22.0,
+        emission: tuple[float, float, float] | None = None,
     ) -> None:
         try:
             prop = actor.GetProperty()
@@ -564,6 +666,11 @@ class PyVistaRenderer(Renderer):
             prop.SetRoughness(float(roughness))
             prop.SetSpecular(float(specular))
             prop.SetSpecularPower(float(specular_power))
+            if emission is not None:
+                if hasattr(prop, "SetEmissiveFactor"):
+                    prop.SetEmissiveFactor(*emission)
+                elif hasattr(prop, "SetEmissive"):
+                    prop.SetEmissive(True)
         except Exception:
             prop = actor.GetProperty()
             prop.SetInterpolationToPhong()
@@ -592,8 +699,11 @@ class PyVistaRenderer(Renderer):
 
         if not show_ground:
             self._remove_actor("ground")
-            self._remove_actor("floor_reflect")
-            self._remove_actor("contact_shadow")
+            self._remove_actor("cyclorama")
+            self._remove_actor("floor_fade")
+            self._remove_actor("foot_shadows")
+            self._remove_actor("body_shadow")
+            self._shadow_sig = None
             self._env_sigs.pop("ground", None)
         if not show_grid:
             self._remove_actor("grid")
@@ -605,6 +715,7 @@ class PyVistaRenderer(Renderer):
 
         if show_ground and self._ground_args is not None:
             size, color, origin = self._ground_args
+            self._floor_origin_z = float(origin[2])
             signature = (
                 round(size, 3),
                 round(float(origin[0]), 3),
@@ -614,13 +725,20 @@ class PyVistaRenderer(Renderer):
             )
             if self._env_sigs.get("ground") != signature:
                 self._remove_actor("ground")
-                self._remove_actor("floor_reflect")
-                self._remove_actor("contact_shadow")
+                self._remove_actor("cyclorama")
+                self._remove_actor("floor_fade")
+                self._remove_actor("foot_shadows")
+                self._remove_actor("body_shadow")
+                self._remove_actor("floor_glow")
+                self._remove_actor("dust")
+                self._shadow_sig = None
+                self._ground_span = size
+                # Flat photography-studio floor — no curved cove, no fade-to-void.
                 plane = self._pv.Plane(
                     center=(float(origin[0]), float(origin[1]), float(origin[2])),
                     direction=(0, 0, 1),
-                    i_size=size,
-                    j_size=size,
+                    i_size=size * 1.35,
+                    j_size=size * 1.35,
                     i_resolution=FLOOR_RESOLUTION,
                     j_resolution=FLOOR_RESOLUTION,
                 )
@@ -629,8 +747,8 @@ class PyVistaRenderer(Renderer):
                     color=color,
                     smooth_shading=True,
                     ambient=0.22,
-                    diffuse=0.78,
-                    specular=0.04,
+                    diffuse=0.62,
+                    specular=FLOOR_SPECULAR,
                     name="studio_floor",
                     render=False,
                 )
@@ -638,63 +756,35 @@ class PyVistaRenderer(Renderer):
                     actor,
                     metallic=FLOOR_METALLIC,
                     roughness=FLOOR_ROUGHNESS,
-                    specular=0.05,
-                    specular_power=8.0,
+                    specular=FLOOR_SPECULAR,
+                    specular_power=12.0,
                 )
                 self._actors["ground"] = actor
 
-                # Soft Gaussian-like contact shadow under the subject.
-                shadow = self._pv.Disc(
-                    center=(
-                        float(origin[0]),
-                        float(origin[1]),
-                        float(origin[2]) + 0.35,
-                    ),
-                    inner=0.0,
-                    outer=size * 0.22,
-                    normal=(0, 0, 1),
-                    r_res=2,
-                    c_res=64,
-                )
-                contact = self._plotter.add_mesh(
-                    shadow,
-                    color=(0.12, 0.13, 0.15),
-                    opacity=CONTACT_SHADOW_OPACITY,
-                    smooth_shading=True,
-                    name="contact_shadow",
-                    render=False,
-                )
-                try:
-                    contact.GetProperty().SetOpacity(CONTACT_SHADOW_OPACITY)
-                    contact.GetProperty().SetLighting(False)
-                except Exception:
-                    pass
-                self._actors["contact_shadow"] = contact
-
-                # Soft distance fade rings - ground dissolves into the void.
+                # Soft warm-gray edge rings (meet wall color — never charcoal void).
+                fade_color = self.theme.floor_accent
                 fade_actors = []
                 for ring_i, (inner_r, outer_r, opacity) in enumerate(
                     (
-                        (0.42, 0.55, 0.10),
-                        (0.55, 0.70, 0.16),
-                        (0.70, 0.92, 0.22),
+                        (0.62, 0.88, 0.10),
+                        (0.88, 1.20, 0.18),
                     )
                 ):
                     ring = self._pv.Disc(
                         center=(
                             float(origin[0]),
                             float(origin[1]),
-                            float(origin[2]) + 0.45 + ring_i * 0.05,
+                            float(origin[2]) + 0.15 + ring_i * 0.03,
                         ),
                         inner=size * inner_r,
                         outer=size * outer_r,
                         normal=(0, 0, 1),
                         r_res=1,
-                        c_res=64,
+                        c_res=36,
                     )
                     fade = self._plotter.add_mesh(
                         ring,
-                        color=self.theme.background,
+                        color=fade_color,
                         opacity=opacity,
                         smooth_shading=True,
                         name=f"floor_fade_{ring_i}",
@@ -705,7 +795,7 @@ class PyVistaRenderer(Renderer):
                     except Exception:
                         pass
                     fade_actors.append(fade)
-                self._actors["floor_reflect"] = fade_actors
+                self._actors["floor_fade"] = fade_actors
                 self._env_sigs["ground"] = signature
 
         if show_grid and self._grid_args is not None:
@@ -717,32 +807,40 @@ class PyVistaRenderer(Renderer):
                 round(float(origin[1]), 3),
                 round(float(origin[2]), 3),
                 color,
-                self.theme.grid_minor,
             )
             if self._env_sigs.get("grid") != signature:
                 self._remove_actor("grid")
                 self._remove_actor("grid_minor")
-                major_mesh, minor_mesh = self._build_grid_meshes(
-                    size, divisions, origin
-                )
-                major = self._plotter.add_mesh(
-                    major_mesh,
+                major, minor = self._build_grid_meshes(size, divisions, origin)
+                actors = []
+                major_act = self._plotter.add_mesh(
+                    major,
                     color=color,
-                    line_width=1.15,
-                    opacity=GRID_MAJOR_OPACITY,
-                    name="studio_grid_major",
+                    line_width=1.0,
+                    opacity=GRID_OPACITY,
+                    name="studio_grid",
                     render=False,
                 )
-                minor = self._plotter.add_mesh(
-                    minor_mesh,
-                    color=self.theme.grid_minor,
-                    line_width=0.8,
-                    opacity=GRID_MINOR_OPACITY,
-                    name="studio_grid_minor",
-                    render=False,
-                )
-                self._actors["grid"] = major
-                self._actors["grid_minor"] = minor
+                try:
+                    major_act.GetProperty().SetLighting(False)
+                except Exception:
+                    pass
+                actors.append(major_act)
+                if minor.n_points > 0:
+                    minor_act = self._plotter.add_mesh(
+                        minor,
+                        color=self.theme.grid_minor,
+                        line_width=0.8,
+                        opacity=GRID_MINOR_OPACITY,
+                        name="studio_grid_minor",
+                        render=False,
+                    )
+                    try:
+                        minor_act.GetProperty().SetLighting(False)
+                    except Exception:
+                        pass
+                    self._actors["grid_minor"] = minor_act
+                self._actors["grid"] = actors
                 self._env_sigs["grid"] = signature
 
         if show_axes and self._axes_args is not None:
@@ -789,6 +887,93 @@ class PyVistaRenderer(Renderer):
                 self._env_sigs["axes"] = signature
 
         self._env_built = True
+
+    def _build_tile_floor(
+        self, size: float, origin: np.ndarray
+    ) -> tuple[Any, Any]:
+        """Reflective lab tiles with subtle grout lines (not a mirror)."""
+        cells = max(TILE_CELLS, 8)
+        ox, oy, oz = float(origin[0]), float(origin[1]), float(origin[2])
+        plane = self._pv.Plane(
+            center=(ox, oy, oz),
+            direction=(0, 0, 1),
+            i_size=size,
+            j_size=size,
+            i_resolution=cells,
+            j_resolution=cells,
+        )
+        centers = np.asarray(plane.cell_centers().points, dtype=float)
+        tile_a = np.asarray(self.theme.ground, dtype=float)
+        tile_b = np.asarray(self.theme.floor_accent, dtype=float)
+        rgb = np.zeros((plane.n_cells, 3), dtype=np.uint8)
+        half = size * 0.5
+        step = size / cells
+        grout_lines: list[Any] = []
+        for idx, (cx, cy, _cz) in enumerate(centers):
+            col = int((cx - ox + half) / step)
+            row = int((cy - oy + half) / step)
+            color = tile_a if (col + row) % 2 == 0 else tile_b
+            rgb[idx] = (color * 255.0).astype(np.uint8)
+        plane.cell_data["tile_rgb"] = rgb
+        for i in range(cells + 1):
+            t = -half + i * step
+            grout_lines.append(
+                self._pv.Line((ox + t, oy - half, oz + 0.5), (ox + t, oy + half, oz + 0.5))
+            )
+            grout_lines.append(
+                self._pv.Line((ox - half, oy + t, oz + 0.5), (ox + half, oy + t, oz + 0.5))
+            )
+        return plane, self._merge_lines(grout_lines)
+
+    def _build_lab_room(self, size: float, origin: np.ndarray) -> None:
+        """Minimal back wall — reads as a capture lab, not a void."""
+        assert self._plotter is not None
+        ox, oy, oz = float(origin[0]), float(origin[1]), float(origin[2])
+        signature = (round(size, 3), round(ox, 3), round(oy, 3), round(oz, 3))
+        if self._env_sigs.get("lab") == signature:
+            return
+        self._remove_actor("lab_wall")
+        wall = self._pv.Plane(
+            center=(ox, oy - size * 0.48, oz + size * 0.22),
+            direction=(0, 1, 0),
+            i_size=size * 1.05,
+            j_size=size * 0.55,
+            i_resolution=1,
+            j_resolution=1,
+        )
+        actor = self._plotter.add_mesh(
+            wall,
+            color=self.theme.background_top,
+            opacity=LAB_WALL_OPACITY,
+            smooth_shading=True,
+            name="lab_wall",
+            render=False,
+        )
+        try:
+            prop = actor.GetProperty()
+            prop.SetAmbient(0.35)
+            prop.SetDiffuse(0.65)
+            prop.SetSpecular(0.02)
+        except Exception:
+            pass
+        self._actors["lab_wall"] = actor
+        self._env_sigs["lab"] = signature
+
+    def _build_alignment_lines(self, size: float, origin: np.ndarray) -> Any:
+        """Faint laser cross-hairs — visible only when you look closely."""
+        half = size * 0.5
+        ox, oy, oz = float(origin[0]), float(origin[1]), float(origin[2]) + 0.35
+        span = half * 0.55
+        tick = half * 0.04
+        lines = [
+            self._pv.Line((ox - span, oy, oz), (ox + span, oy, oz)),
+            self._pv.Line((ox, oy - span, oz), (ox, oy + span, oz)),
+            self._pv.Line((ox - tick, oy - span, oz), (ox + tick, oy - span, oz)),
+            self._pv.Line((ox - tick, oy + span, oz), (ox + tick, oy + span, oz)),
+            self._pv.Line((ox - span, oy - tick, oz), (ox - span, oy + tick, oz)),
+            self._pv.Line((ox + span, oy - tick, oz), (ox + span, oy + tick, oz)),
+        ]
+        return self._merge_lines(lines)
 
     def _build_grid_meshes(
         self, size: float, divisions: int, origin: np.ndarray
@@ -861,11 +1046,13 @@ class PyVistaRenderer(Renderer):
     def _skeleton_signature(self, has_labels: bool) -> tuple[Any, ...]:
         joint_colors = tuple(self._joint_colors)
         bone_colors = tuple(self._bone_colors)
+        bone_names = tuple(self._bone_seg_names)
+        radii = tuple(round(r, 2) for r in self._joint_radii)
         return (
             len(self._joint_pts),
             len(self._bone_segs),
-            round(self._joint_radius, 3),
-            round(max(self._joint_radius * self._bone_radius_scale, 14.0), 3),
+            radii,
+            bone_names,
             joint_colors,
             bone_colors,
             has_labels,
@@ -874,25 +1061,20 @@ class PyVistaRenderer(Renderer):
     def _build_skeleton_actors(self, has_labels: bool) -> None:
         assert self._plotter is not None
         if self._bone_segs:
-            self._bone_line_mesh, self._bone_segment_count = self._make_bone_line_mesh(
-                self._bone_segs
+            base_r = (
+                float(np.median(self._joint_radii))
+                if self._joint_radii
+                else self._joint_radius
             )
-            self._bone_tube_radius = max(
-                self._joint_radius * self._bone_radius_scale, 14.0
-            )
-            self._bone_tube_mesh = self._bone_line_mesh.tube(
-                radius=self._bone_tube_radius,
-                n_sides=BONE_TUBE_SIDES,
-                capping=True,
-            )
-            self._bone_mesh = self._bone_tube_mesh
+            self._bone_radial_scale = max(base_r * BONE_RADIUS_RATIO, BONE_RADIUS_MIN)
+            self._bone_mesh = self._build_anatomical_bone_mesh(self._bone_segs)
             bone_color = (
                 self._bone_colors[0]
                 if len(set(self._bone_colors)) == 1
                 else self.theme.bone
             )
             actor = self._plotter.add_mesh(
-                self._bone_tube_mesh,
+                self._bone_mesh,
                 color=bone_color,
                 smooth_shading=True,
                 name="bones",
@@ -902,18 +1084,19 @@ class PyVistaRenderer(Renderer):
                 actor,
                 metallic=BONE_METALLIC,
                 roughness=BONE_ROUGHNESS,
-                specular=0.42,
+                specular=0.55,
                 specular_power=48.0,
             )
             self._actors["bones"] = actor
 
         if self._joint_pts:
+            radii = self._joint_radii or [self._joint_radius] * len(self._joint_pts)
             (
                 self._joint_mesh,
                 self._joint_template_pts,
                 self._joint_template_faces,
                 self._joint_points_per_sphere,
-            ) = self._make_joint_mesh(self._joint_pts, self._joint_radius)
+            ) = self._make_joint_mesh(self._joint_pts, radii)
             unique = set(self._joint_colors)
             use_rgb = len(unique) > 1
             if use_rgb:
@@ -943,20 +1126,18 @@ class PyVistaRenderer(Renderer):
                     name="joints",
                     render=False,
                 )
-            # Polished gold joint nodes.
             self._apply_pbr(
                 actor,
                 metallic=JOINT_METALLIC,
                 roughness=JOINT_ROUGHNESS,
-                specular=0.55,
-                specular_power=64.0,
+                specular=0.70,
+                specular_power=80.0,
             )
-            # Soft selection glow when Apple-blue joints are present.
             if any(c == self.theme.selected for c in self._joint_colors):
                 try:
                     prop = actor.GetProperty()
-                    prop.SetAmbient(0.22)
-                    prop.SetDiffuse(0.78)
+                    prop.SetAmbient(0.18)
+                    prop.SetDiffuse(0.85)
                 except Exception:
                     pass
             self._actors["joints"] = actor
@@ -983,43 +1164,37 @@ class PyVistaRenderer(Renderer):
         assert self._plotter is not None
         if self._joint_mesh is not None and self._joint_template_pts is not None:
             n = self._joint_points_per_sphere
-            radius = self._joint_radius
-            template = self._joint_template_pts * radius
+            template = self._joint_template_pts
             centers = np.asarray(self._joint_pts, dtype=float)
             if centers.ndim == 1:
                 centers = centers.reshape(1, 3)
+            radii = np.asarray(
+                self._joint_radii or [self._joint_radius] * len(centers),
+                dtype=float,
+            )
             expected = len(centers) * self._joint_points_per_sphere
             if self._joint_mesh.n_points != expected:
                 self._invalidate_skeleton_cache()
                 self._skeleton_sig = None
                 return
-            points = (template[None, :, :] + centers[:, None, :]).reshape(-1, 3)
+            scaled = template[None, :, :] * radii[:, None, None]
+            points = (scaled + centers[:, None, :]).reshape(-1, 3)
             self._joint_mesh.points = points
             self._joint_mesh.Modified()
 
-        if (
-            self._bone_line_mesh is not None
-            and self._bone_tube_mesh is not None
-            and self._bone_segment_count > 0
-        ):
-            points = self._bone_line_mesh.points
+        if self._bone_mesh is not None and self._bone_unit_templates:
+            points = np.asarray(self._bone_mesh.points, dtype=float)
             for index, (start, end) in enumerate(self._bone_segs):
-                offset = index * 2
-                points[offset] = start
-                points[offset + 1] = end
-            self._bone_line_mesh.points = points
-            self._bone_line_mesh.Modified()
-            new_tube = self._bone_line_mesh.tube(
-                radius=self._bone_tube_radius,
-                n_sides=BONE_TUBE_SIDES,
-                capping=True,
-            )
-            if new_tube.n_points == self._bone_tube_mesh.n_points:
-                self._bone_tube_mesh.points = new_tube.points
-                self._bone_tube_mesh.Modified()
-            else:
-                self._bone_tube_mesh.copy_from(new_tube)
-                self._bone_tube_mesh.Modified()
+                begin, end_idx = self._bone_vertex_slices[index]
+                template = self._bone_unit_templates[index]
+                points[begin:end_idx] = transform_bone(
+                    template,
+                    start,
+                    end,
+                    radial_scale=self._bone_radial_scale,
+                )
+            self._bone_mesh.points = points
+            self._bone_mesh.Modified()
 
         if self._labels:
             self._remove_actor("labels")
@@ -1043,10 +1218,14 @@ class PyVistaRenderer(Renderer):
     def _make_joint_mesh(
         self,
         centers: Sequence[np.ndarray],
-        radius: float,
+        radii: Sequence[float] | float,
     ) -> tuple[Any, np.ndarray, np.ndarray | None, int]:
+        if isinstance(radii, (int, float)):
+            radius_list = [float(radii)] * len(centers)
+        else:
+            radius_list = [float(r) for r in radii]
         template = self._pv.Sphere(
-            radius=radius,
+            radius=1.0,
             center=(0.0, 0.0, 0.0),
             theta_resolution=JOINT_SPHERE_RESOLUTION,
             phi_resolution=JOINT_SPHERE_RESOLUTION,
@@ -1055,12 +1234,12 @@ class PyVistaRenderer(Renderer):
         n = int(template.n_points)
         spheres = [
             self._pv.Sphere(
-                radius=radius,
+                radius=radius_list[i],
                 center=center,
                 theta_resolution=JOINT_SPHERE_RESOLUTION,
                 phi_resolution=JOINT_SPHERE_RESOLUTION,
             )
-            for center in centers
+            for i, center in enumerate(centers)
         ]
         try:
             mesh = self._pv.merge(spheres)
@@ -1068,21 +1247,129 @@ class PyVistaRenderer(Renderer):
             mesh = spheres[0]
             for sphere in spheres[1:]:
                 mesh = mesh.merge(sphere)
-        return mesh, base_pts / max(radius, 1e-9), None, n
+        return mesh, base_pts, None, n
 
-    def _make_bone_line_mesh(
+    def _update_contact_shadows(self) -> None:
+        """Soft radial contact shadows under feet + subtle body ambient."""
+        if self._plotter is None or not self.scene.show_ground:
+            return
+
+        floor_z = self._floor_origin_z
+        span = max(self._joint_radius * 0.85, 12.0)
+        n_feet = len(self._foot_positions)
+        build_key = (n_feet, round(span, 1), bool(self._joint_pts))
+
+        if self._shadow_sig != build_key or "foot_shadows" not in self._actors:
+            self._shadow_sig = build_key
+            self._remove_actor("foot_shadows")
+            self._remove_actor("body_shadow")
+            self._remove_actor("floor_glow")
+            shadow_color = CONTACT_SHADOW_RGB
+
+            foot_actors: list[Any] = []
+            for _ in range(max(n_feet, 0)):
+                disc = self._pv.Disc(
+                    center=(0.0, 0.0, floor_z + 0.35),
+                    inner=0.0,
+                    outer=span * 0.55,
+                    normal=(0, 0, 1),
+                    r_res=1,
+                    c_res=24,
+                )
+                actor = self._plotter.add_mesh(
+                    disc,
+                    color=shadow_color,
+                    opacity=FOOT_SHADOW_OPACITY,
+                    smooth_shading=True,
+                    name="foot_shadow",
+                    render=False,
+                )
+                try:
+                    actor.GetProperty().SetLighting(False)
+                except Exception:
+                    pass
+                foot_actors.append(actor)
+            if foot_actors:
+                self._actors["foot_shadows"] = foot_actors
+
+            if self._joint_pts:
+                body = self._pv.Disc(
+                    center=(0.0, 0.0, floor_z + 0.28),
+                    inner=0.0,
+                    outer=span * 2.2,
+                    normal=(0, 0, 1),
+                    r_res=1,
+                    c_res=28,
+                )
+                body_actor = self._plotter.add_mesh(
+                    body,
+                    color=shadow_color,
+                    opacity=BODY_SHADOW_OPACITY,
+                    smooth_shading=True,
+                    name="body_shadow",
+                    render=False,
+                )
+                try:
+                    body_actor.GetProperty().SetLighting(False)
+                except Exception:
+                    pass
+                self._actors["body_shadow"] = body_actor
+
+        foot_actors = self._actors.get("foot_shadows")
+        if isinstance(foot_actors, list):
+            for actor, foot in zip(foot_actors, self._foot_positions, strict=False):
+                try:
+                    actor.SetPosition(float(foot[0]), float(foot[1]), 0.0)
+                except Exception:
+                    pass
+
+        if not self._joint_pts:
+            return
+        pts = np.asarray(self._joint_pts, dtype=float)
+        center = pts.mean(axis=0)
+        body_actor = self._actors.get("body_shadow")
+        if body_actor is not None:
+            try:
+                body_actor.SetPosition(float(center[0]), float(center[1]), 0.0)
+            except Exception:
+                pass
+
+    def _build_anatomical_bone_mesh(
         self,
         segments: Sequence[tuple[np.ndarray, np.ndarray]],
-    ) -> tuple[Any, int]:
-        points = np.zeros((len(segments) * 2, 3), dtype=float)
-        lines: list[int] = []
+    ) -> Any:
+        """Merge anatomical cortical bones into a single drawable mesh."""
+        parts: list[tuple[np.ndarray, np.ndarray]] = []
+        self._bone_unit_templates = []
+        self._bone_vertex_slices = []
+        vertex_offset = 0
+
         for index, (start, end) in enumerate(segments):
-            offset = index * 2
-            points[offset] = start
-            points[offset + 1] = end
-            lines.extend([2, offset, offset + 1])
-        mesh = self._pv.PolyData(points, lines=np.asarray(lines, dtype=np.int64))
-        return mesh, len(segments)
+            label = (
+                self._bone_seg_names[index].removeprefix("bone:")
+                if index < len(self._bone_seg_names)
+                else "default"
+            )
+            profile = profile_for_bone(label)
+            unit_pts, unit_faces = build_unit_bone_template(profile)
+            placed = transform_bone(
+                unit_pts,
+                start,
+                end,
+                radial_scale=self._bone_radial_scale,
+            )
+            parts.append((placed, unit_faces))
+            self._bone_unit_templates.append(unit_pts)
+            self._bone_vertex_slices.append(
+                (vertex_offset, vertex_offset + int(placed.shape[0]))
+            )
+            vertex_offset += int(placed.shape[0])
+
+        vertices, faces = merge_bone_meshes(parts)
+        vtk_faces = np.hstack(
+            [np.full((faces.shape[0], 1), 3, dtype=np.int64), faces]
+        ).ravel()
+        return self._pv.PolyData(vertices, vtk_faces)
 
     def _apply_camera(self, camera: CameraState) -> None:
         assert self._plotter is not None

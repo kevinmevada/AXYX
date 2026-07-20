@@ -66,7 +66,7 @@ class ViewportToolbar(QWidget):
         display.setToolTip("Display options")
         display.setFixedHeight(28)
         menu = QMenu(display)
-        _check(menu, "Grid", "G", True, self.gridToggled)
+        _check(menu, "Alignment", "G", True, self.gridToggled)
         _check(menu, "Ground", "", True, self.groundToggled)
         _check(menu, "Axes", "A", True, self.axesToggled)
         _check(menu, "Lighting", "", True, self.lightingToggled)
