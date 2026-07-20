@@ -1,0 +1,54 @@
+# Unreal Engine 5 integration defaults.
+# Motion Engine never imports Unreal; this file drives the Python export layer.
+
+schema_version: "1.0.0"
+name: unreal_ue5_defaults
+
+source_coordinate_system: lab
+target_coordinate_system: unreal
+
+# Unknown mocap units: operator must confirm. Default export scale treats
+# lab values as millimetres → Unreal centimetres (×0.1).
+unit_scale:
+  from: Unknown
+  to: cm
+  factor: 0.1
+  note: >
+    If your filtered MATLAB data is already in metres, set factor to 100.0
+    (m → cm). If already centimetres, set factor to 1.0.
+
+# Lab (assumed right-handed Z-up) → Unreal (left-handed Z-up).
+# Documented transforms; converters apply configured remap.
+axes:
+  source_handedness: right
+  target_handedness: left
+  source_up: Z
+  target_up: Z
+  # Negate Y to flip handedness while keeping Z-up.
+  remap:
+    x: +x
+    y: -y
+    z: +z
+
+root_motion:
+  enable: true
+  root_joint: Pelvis
+  extract_forward_axis: y
+
+animation_sequence:
+  additive: false
+  interpolation: linear
+  enable_root_motion: true
+
+import:
+  asset_prefix: ME_
+  skeleton_asset_suffix: _Skeleton
+  anim_asset_suffix: _Anim
+  content_path: /Game/MotionEngine
+  create_directory_structure: true
+
+chaos_physics_ready:
+  note: >
+    Export prepares root motion and bone hierarchy only. Chaos, Foot IK,
+    ragdoll, and collision are configured Unreal-side.
+  expose_sockets: [pelvis, foot_l, foot_r, hand_l, hand_r]

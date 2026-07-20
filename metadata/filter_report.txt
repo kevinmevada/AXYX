@@ -1,0 +1,42 @@
+============================================================
+SUBJECT FILTERING REPORT
+============================================================
+
+Timestamp: 2026-07-13T22:12:36.439717
+
+ORIGINAL DATASET SUMMARY
+------------------------------------------------------------
+Original subject count: 43
+Original subject IDs: S10, S11, S12, S13, S14, S15, S17, S18, S19, S2, S21, S22, S23, S25, S26, S27, S29, S3, S30, S31, S32, S33, S34, S35, S36, S37, S38, S39, S4, S40, S41, S42, S43, S45, S46, S47, S48, S5, S50, S6, S7, S8, S9
+
+FILTERING SUMMARY
+------------------------------------------------------------
+Remaining subject count: 31
+Removed subject count: 12
+
+Remaining IDs: S11, S12, S13, S14, S15, S17, S19, S2, S23, S26, S27, S3, S30, S31, S32, S34, S35, S37, S38, S39, S4, S40, S41, S42, S43, S46, S48, S5, S7, S8, S9
+
+Removed IDs: S10, S18, S21, S22, S25, S29, S33, S36, S45, S47, S50, S6
+
+DAT.INSPECTION
+------------------------------------------------------------
+Has Res: True
+Shape: (1, 1)
+Dtype: object
+Fields: 
+Contains subject references: False
+Contains subject indices: False
+Contains global statistics: False
+Contains metadata: False
+Contains mappings: False
+
+VALIDATION SUMMARY
+------------------------------------------------------------
+Validation result: PASSED
+Expected original subjects: 43
+Expected filtered subjects: 31
+Expected removed subjects: 12
+
+OUTPUT FILE LOCATION
+------------------------------------------------------------
+C:\Users\mevad\Desktop\V_\data\processed\Data_structure_filtered.mat

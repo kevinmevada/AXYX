@@ -1,0 +1,285 @@
+# Skeleton definition for the clinical gait Plug-in Gait marker set.
+# Marker / joint-center mappings live HERE — never hardcoded in Python.
+#
+# Export targets (future): OpenSim, BVH, FBX, glTF, URDF, USD, ROS,
+# Blender, Unity, Unreal Engine, NVIDIA Omniverse.
+
+schema_version: "1.0.0"
+name: clinical_gait_plugin_gait
+description: >
+  Renderer-independent full-body skeleton driven by Vicon Plug-in Gait
+  style markers from the filtered MotionDatabase sessions.
+root_joint: Pelvis
+units: Unknown
+coordinate_system: lab
+
+# ---------------------------------------------------------------------------
+# Joints
+# Each joint position is resolved from prioritized sources:
+#   - joint_center: session.kinematics.joint_centers[name]
+#   - marker / markers: centroid of session.kinematics.markers
+# method applies to multi-marker sources (centroid | first)
+# ---------------------------------------------------------------------------
+joints:
+  Pelvis:
+    parent: null
+    sources:
+      - type: markers
+        names: [LASI, RASI, LPSI, RPSI]
+        method: centroid
+        priority: 1
+
+  LHip:
+    parent: Pelvis
+    sources:
+      - type: joint_center
+        name: LHJC
+        priority: 1
+      - type: markers
+        names: [LASI]
+        method: first
+        priority: 2
+
+  RHip:
+    parent: Pelvis
+    sources:
+      - type: joint_center
+        name: RHJC
+        priority: 1
+      - type: markers
+        names: [RASI]
+        method: first
+        priority: 2
+
+  LKnee:
+    parent: LHip
+    sources:
+      - type: joint_center
+        name: LKJC
+        priority: 1
+      - type: markers
+        names: [LKNE]
+        method: first
+        priority: 2
+
+  RKnee:
+    parent: RHip
+    sources:
+      - type: joint_center
+        name: RKJC
+        priority: 1
+      - type: markers
+        names: [RKNE]
+        method: first
+        priority: 2
+
+  LAnkle:
+    parent: LKnee
+    sources:
+      - type: joint_center
+        name: LAJC
+        priority: 1
+      - type: markers
+        names: [LANK]
+        method: first
+        priority: 2
+
+  RAnkle:
+    parent: RKnee
+    sources:
+      - type: joint_center
+        name: RAJC
+        priority: 1
+      - type: markers
+        names: [RANK]
+        method: first
+        priority: 2
+
+  LFoot:
+    parent: LAnkle
+    sources:
+      - type: markers
+        names: [LTOE]
+        method: first
+        priority: 1
+      - type: markers
+        names: [LHEE]
+        method: first
+        priority: 2
+
+  RFoot:
+    parent: RAnkle
+    sources:
+      - type: markers
+        names: [RTOE]
+        method: first
+        priority: 1
+      - type: markers
+        names: [RHEE]
+        method: first
+        priority: 2
+
+  Thorax:
+    parent: Pelvis
+    sources:
+      - type: markers
+        names: [C7, T10, CLAV, STRN]
+        method: centroid
+        priority: 1
+
+  Neck:
+    parent: Thorax
+    sources:
+      - type: markers
+        names: [C7, CLAV]
+        method: centroid
+        priority: 1
+
+  Head:
+    parent: Neck
+    sources:
+      - type: markers
+        names: [LFHD, RFHD, LBHD, RBHD]
+        method: centroid
+        priority: 1
+
+  LShoulder:
+    parent: Thorax
+    sources:
+      - type: markers
+        names: [LSHO]
+        method: first
+        priority: 1
+
+  RShoulder:
+    parent: Thorax
+    sources:
+      - type: markers
+        names: [RSHO]
+        method: first
+        priority: 1
+
+  LElbow:
+    parent: LShoulder
+    sources:
+      - type: markers
+        names: [LELB]
+        method: first
+        priority: 1
+
+  RElbow:
+    parent: RShoulder
+    sources:
+      - type: markers
+        names: [RELB]
+        method: first
+        priority: 1
+
+  LWrist:
+    parent: LElbow
+    sources:
+      - type: markers
+        names: [LWRA, LWRB]
+        method: centroid
+        priority: 1
+
+  RWrist:
+    parent: RElbow
+    sources:
+      - type: markers
+        names: [RWRA, RWRB]
+        method: centroid
+        priority: 1
+
+  LHand:
+    parent: LWrist
+    sources:
+      - type: markers
+        names: [LFIN]
+        method: first
+        priority: 1
+
+  RHand:
+    parent: RWrist
+    sources:
+      - type: markers
+        names: [RFIN]
+        method: first
+        priority: 1
+
+# ---------------------------------------------------------------------------
+# Bones (parent_joint → child_joint edges of the hierarchy)
+# ---------------------------------------------------------------------------
+bones:
+  LPelvisHip:
+    parent_joint: Pelvis
+    child_joint: LHip
+  RPelvisHip:
+    parent_joint: Pelvis
+    child_joint: RHip
+  LFemur:
+    parent_joint: LHip
+    child_joint: LKnee
+  RFemur:
+    parent_joint: RHip
+    child_joint: RKnee
+  LTibia:
+    parent_joint: LKnee
+    child_joint: LAnkle
+  RTibia:
+    parent_joint: RKnee
+    child_joint: RAnkle
+  LFoot:
+    parent_joint: LAnkle
+    child_joint: LFoot
+  RFoot:
+    parent_joint: RAnkle
+    child_joint: RFoot
+  Spine:
+    parent_joint: Pelvis
+    child_joint: Thorax
+  Cervical:
+    parent_joint: Thorax
+    child_joint: Neck
+  Skull:
+    parent_joint: Neck
+    child_joint: Head
+  LClavicle:
+    parent_joint: Thorax
+    child_joint: LShoulder
+  RClavicle:
+    parent_joint: Thorax
+    child_joint: RShoulder
+  LHumerus:
+    parent_joint: LShoulder
+    child_joint: LElbow
+  RHumerus:
+    parent_joint: RShoulder
+    child_joint: RElbow
+  LForearm:
+    parent_joint: LElbow
+    child_joint: LWrist
+  RForearm:
+    parent_joint: RElbow
+    child_joint: RWrist
+  LHand:
+    parent_joint: LWrist
+    child_joint: LHand
+  RHand:
+    parent_joint: RWrist
+    child_joint: RHand
+
+# Required markers for a "complete" skeleton validation (soft completeness).
+required_markers:
+  - LASI
+  - RASI
+  - LPSI
+  - RPSI
+  - LKNE
+  - RKNE
+  - LANK
+  - RANK
+  - LSHO
+  - RSHO
+  - C7
+  - T10

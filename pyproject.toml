@@ -1,0 +1,22 @@
+[project]
+name = "axyx"
+version = "0.1.0"
+description = "AXYX — clinical gait motion research platform (Motion Engine + Studio)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "AXYX Contributors" }]
+keywords = [
+  "biomechanics",
+  "gait",
+  "motion-capture",
+  "visualization",
+  "research",
+]
+
+[project.urls]
+Repository = "https://github.com/axyx/axyx"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

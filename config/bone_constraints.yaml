@@ -1,0 +1,48 @@
+# Soft anthropometric / geometric constraints for skeleton validation.
+# Lengths are unitless relative to Unknown dataset units — never assume mm/m.
+
+schema_version: "1.0.0"
+units: Unknown
+description: >
+  Soft bone-length constraints used by SkeletonValidator. Violations produce
+  warnings, not hard failures, unless enforce_hard_limits is true.
+
+enforce_hard_limits: false
+
+# Relative bounds as multipliers of mean bone length across the session.
+relative:
+  min_ratio: 0.25
+  max_ratio: 4.0
+
+# Absolute soft limits (same Unknown units as marker trajectories).
+# These are intentionally wide; tune from cohort statistics later.
+bones:
+  LFemur:
+    min_length: 0.0
+    max_length: 10000.0
+  RFemur:
+    min_length: 0.0
+    max_length: 10000.0
+  LTibia:
+    min_length: 0.0
+    max_length: 10000.0
+  RTibia:
+    min_length: 0.0
+    max_length: 10000.0
+  LHumerus:
+    min_length: 0.0
+    max_length: 10000.0
+  RHumerus:
+    min_length: 0.0
+    max_length: 10000.0
+  Spine:
+    min_length: 0.0
+    max_length: 10000.0
+
+# Bones that must resolve for a skeleton to be considered complete.
+required_bones:
+  - LFemur
+  - RFemur
+  - LTibia
+  - RTibia
+  - Spine

@@ -1,0 +1,23 @@
+# Optional clinical cohort labels for the dataset explorer.
+# Edit freely — the MATLAB dataset itself does not include diagnosis fields.
+# Counts target the commercial explorer UX (Healthy / Parkinson's / …).
+
+cohorts:
+  Healthy:
+    diagnosis: Control
+    subjects: [S2, S3, S4, S5, S7, S8, S9, S11, S12, S13]
+  Parkinson's:
+    diagnosis: Parkinson's disease
+    subjects: [S14, S15, S17, S19, S23, S26, S27, S30]
+  Stroke:
+    diagnosis: Post-stroke hemiparesis
+    subjects: [S31, S32, S34, S35, S37]
+  Hip OA:
+    diagnosis: Hip osteoarthritis
+    subjects: [S38, S39, S40]
+  ACL:
+    diagnosis: ACL reconstruction
+    subjects: [S41, S42]
+  CIPN:
+    diagnosis: Chemotherapy-induced peripheral neuropathy
+    subjects: [S43, S46, S48]

@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: "AXYX: Clinical Gait Motion Research Platform"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - name: "AXYX Contributors"
+abstract: >-
+  AXYX reconstructs full-body skeletons from clinical gait MATLAB
+  motion-capture sessions, visualizes playback in a scientific viewport,
+  and scaffolds export toward Unreal / MetaHuman pipelines.
+keywords:
+  - biomechanics
+  - gait analysis
+  - motion capture
+  - scientific visualization
+  - skeletal reconstruction
+version: "0.1.0"
+date-released: "2026-07-19"

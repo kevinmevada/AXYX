@@ -1,0 +1,34 @@
+# Coordinate-system policy for Human Reconstruction.
+# Marker data units remain Unknown until an authoritative source is supplied.
+
+schema_version: "1.0.0"
+name: lab
+description: >
+  Default laboratory / motion-capture frame. Axes are not remapped by the
+  Skeleton Builder; layout detection only normalizes array orientation.
+
+units: Unknown
+
+# Canonical internal trajectory layout after normalization.
+internal_layout: "N,3"   # frames x XYZ
+
+supported_layouts:
+  - "N,3"
+  - "3,N"
+
+# Axis semantics are documentary only until calibrated against lab notes.
+axes:
+  x: unknown
+  y: unknown
+  z: unknown
+
+# Future remapping targets (not applied in this phase).
+export_presets:
+  opensim:
+    note: TODO - map lab -> OpenSim ground frame
+  bvh:
+    note: TODO - map lab -> BVH Y-up
+  unreal:
+    note: TODO - map lab -> Unreal Z-up left-handed
+  omniverse:
+    note: TODO - map lab -> USD/Omniverse stage frame

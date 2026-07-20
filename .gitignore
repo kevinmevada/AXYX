@@ -1,0 +1,52 @@
+# AXYX — research project ignore rules
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments
+venv/
+venv311/
+.env
+.venv/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local runtime / captures
+logs/
+out/
+output/
+*.log
+DepthCapture_*.png
+DepthCamera_*.json
+ScreenCapture_*.png
+ScreenCamera_*.json
+
+# Large / local data (keep structure; ignore bulky binaries)
+data/raw/**
+!data/raw/.gitkeep
+data/processed/**
+!data/processed/.gitkeep
+*.mat
+Victimization surveys.xlsx
+anaconda_projects/
+
+# Results may be regenerated
+results/exports/*
+!results/exports/.gitkeep
+results/figures/*
+!results/figures/.gitkeep

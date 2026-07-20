@@ -1,0 +1,41 @@
+Original Name,Classification,Frequency,Subjects Present
+WK01Copy,Alternate Walking,1,S12
+WK02Copy,Alternate Walking,1,S12
+WK04Copy,Alternate Walking,1,S12
+WK05Copy,Alternate Walking,1,S12
+WK06Copy,Alternate Walking,1,S12
+WK07Copy,Alternate Walking,1,S12
+WK08Copy,Alternate Walking,1,S12
+WK09Copy,Alternate Walking,1,S12
+WK10Copy,Alternate Walking,1,S12
+WK11Copy,Alternate Walking,1,S12
+WU0,Alternate Walking,1,S17
+WU01,Walking,27,"S11, S13, S14, S15, S2, S23, S26, S27, S3, S31, S32, S34, S35, S37, S38, S39, S4, S40, S41, S42, S43, S46, S48, S5, S7, S8, S9"
+WU01Copy,Walking Copy,1,S12
+WU02,Walking,28,"S11, S13, S15, S19, S2, S23, S26, S27, S3, S30, S31, S32, S34, S35, S37, S38, S39, S4, S40, S41, S42, S43, S46, S48, S5, S7, S8, S9"
+WU02Copy,Walking Copy,1,S12
+WU03,Walking,27,"S11, S13, S14, S15, S19, S2, S23, S26, S27, S3, S32, S34, S35, S37, S38, S39, S4, S40, S41, S42, S43, S46, S48, S5, S7, S8, S9"
+WU03Copy,Walking Copy,1,S12
+WU04,Walking,28,"S11, S13, S14, S15, S19, S2, S23, S26, S27, S3, S30, S32, S34, S35, S37, S38, S39, S4, S40, S41, S42, S43, S46, S48, S5, S7, S8, S9"
+WU04Copy,Walking Copy,1,S12
+WU05,Walking,28,"S11, S14, S15, S19, S2, S23, S26, S27, S3, S30, S31, S32, S34, S35, S37, S38, S39, S4, S40, S41, S42, S43, S46, S48, S5, S7, S8, S9"
+WU05Copy,Walking Copy,1,S12
+WU06,Walking,23,"S11, S14, S15, S2, S23, S26, S27, S3, S30, S31, S32, S34, S35, S37, S38, S39, S4, S41, S43, S46, S7, S8, S9"
+WU07,Walking,23,"S11, S14, S15, S2, S23, S26, S27, S3, S30, S31, S32, S35, S37, S38, S39, S4, S40, S41, S48, S5, S7, S8, S9"
+WU07Copy,Walking Copy,1,S12
+WU08,Walking,22,"S11, S13, S14, S15, S2, S23, S26, S27, S31, S32, S34, S35, S37, S38, S39, S4, S41, S42, S46, S5, S8, S9"
+WU08Copy,Walking Copy,1,S12
+WU09,Walking,17,"S11, S14, S2, S23, S26, S27, S32, S35, S37, S38, S39, S40, S48, S5, S7, S8, S9"
+WU10,Walking,8,"S15, S27, S31, S32, S35, S39, S4, S48"
+WU11,Walking,9,"S17, S3, S31, S32, S34, S35, S40, S46, S48"
+WU12,Walking,3,"S34, S35, S48"
+WU13,Walking,2,"S17, S31"
+WU14,Walking,1,S46
+WU3,Alternate Walking,1,S17
+WU4,Alternate Walking,1,S17
+WU5,Alternate Walking,1,S17
+WU6,Alternate Walking,1,S17
+WU7,Alternate Walking,1,S17
+WU9,Alternate Walking,1,S17
+static,Calibration,30,"S11, S13, S14, S15, S17, S19, S2, S23, S26, S27, S3, S30, S31, S32, S34, S35, S37, S38, S39, S4, S40, S41, S42, S43, S46, S48, S5, S7, S8, S9"
+staticCopy,Calibration Copy,1,S12

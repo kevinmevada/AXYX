@@ -1,0 +1,78 @@
+# Motion Skeleton → MetaHuman (UE5) joint mapping.
+# Never hardcode these names in Python — edit this file instead.
+#
+# Source: clinical_gait_plugin_gait (Motion Engine)
+# Target: MetaHuman body skeleton (UE5 Control Rig / IK Retargeter naming)
+
+schema_version: "1.0.0"
+name: clinical_gait_to_metahuman
+source_skeleton: clinical_gait_plugin_gait
+target_skeleton: metahuman_ue5
+description: >
+  Maps Plug-in Gait style Motion Engine joints onto the UE5 MetaHuman
+  humanoid hierarchy used by IK Retargeter / Control Rig.
+
+root_joint:
+  source: Pelvis
+  target: pelvis
+
+joints:
+  Pelvis: pelvis
+  Thorax: spine_03
+  Neck: neck_01
+  Head: head
+  LShoulder: clavicle_l
+  RShoulder: clavicle_r
+  LElbow: lowerarm_l
+  RElbow: lowerarm_r
+  LWrist: hand_l
+  RWrist: hand_r
+  LHand: hand_l
+  RHand: hand_r
+  LHip: thigh_l
+  RHip: thigh_r
+  LKnee: calf_l
+  RKnee: calf_r
+  LAnkle: foot_l
+  RAnkle: foot_r
+  LFoot: ball_l
+  RFoot: ball_r
+
+aliases:
+  pelvis: Pelvis
+  root: Pelvis
+  hips: Pelvis
+  chest: Thorax
+  spine: Thorax
+  neck: Neck
+  head: Head
+  left_hip: LHip
+  right_hip: RHip
+  left_knee: LKnee
+  right_knee: RKnee
+  left_ankle: LAnkle
+  right_ankle: RAnkle
+  left_foot: LFoot
+  right_foot: RFoot
+  left_shoulder: LShoulder
+  right_shoulder: RShoulder
+  left_elbow: LElbow
+  right_elbow: RElbow
+  left_wrist: LWrist
+  right_wrist: RWrist
+
+ignored_joints: []
+required_joints: [Pelvis, Thorax, Neck, Head, LHip, RHip, LKnee, RKnee, LAnkle, RAnkle]
+
+# Optional chain templates for future IK Retargeter profiles.
+chains:
+  spine: [Pelvis, Thorax, Neck, Head]
+  left_arm: [LShoulder, LElbow, LWrist, LHand]
+  right_arm: [RShoulder, RElbow, RWrist, RHand]
+  left_leg: [LHip, LKnee, LAnkle, LFoot]
+  right_leg: [RHip, RKnee, RAnkle, RFoot]
+
+notes:
+  - Finger / face joints are out of scope for this mapping.
+  - Unreal-side IK Retargeter may refine clavicle/shoulder offsets.
+  - Target names follow MetaHuman / UE5 Mannequin conventions.

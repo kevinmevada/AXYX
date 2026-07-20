@@ -1,0 +1,97 @@
+name,semantic_category,subject_count,session_count,shape,frame_count,coordinate_dimensions,trajectory_layout,coordinate_axis,datatype,units
+LFHD,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RFHD,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LBHD,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RBHD,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+C7,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+T10,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+CLAV,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+STRN,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RBAK,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LSHO,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LUPA,markers,31,296,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LELB,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LFRM,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LWRA,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LWRB,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LFIN,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RSHO,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RUPA,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RELB,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RFRM,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RWRA,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RWRB,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RFIN,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LASI,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RASI,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LPSI,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RPSI,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LTHI,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LKNE,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LANK,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LHEE,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LTOE,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RTHI,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RKNE,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RANK,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RHEE,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RTOE,markers,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LHipAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LKneeAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LAbsAnkleAngle,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LAnkleAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RHipAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RKneeAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RAnkleAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RAbsAnkleAngle,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LPelvisAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RPelvisAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LFootProgressAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RFootProgressAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RNeckAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LNeckAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RSpineAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LSpineAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LShoulderAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LElbowAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LWristAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RShoulderAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RElbowAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RWristAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RThoraxAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LThoraxAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RHeadAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LHeadAngles,joint_angles,31,301,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LHJC,joint_centers,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RHJC,joint_centers,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LKJC,joint_centers,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RKJC,joint_centers,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LAJC,joint_centers,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RAJC,joint_centers,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+CentreOfMass,center_of_mass,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+CentreOfMassFloor,center_of_mass,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+PelvisCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LeftFemurCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LeftTibiaCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LeftFootCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RightFemurCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RightTibiaCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RightFootCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+ThoraxCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+HeadCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LeftHumerusCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LeftRadiusCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+LeftHandCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RightHumerusCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RightRadiusCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+RightHandCOM,segment_com,31,270,"(204, 3)",204.0,3.0,"N,3",1.0,float64,Unknown
+StpLen,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+StpWth,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+FCKneeAtt,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+MSKneeAtt,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+WkVel,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+MTC,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+Upright,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+nUpright,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+NeckAng,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
+MxStKneeAtt,clinical_metric,31,260,"(1,)",,,,,"[('_TypeSystem', 'O'), ('_Class', 'O'), ('_ObjectMetadata', 'O')]",Unknown
