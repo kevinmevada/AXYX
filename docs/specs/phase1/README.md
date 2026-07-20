@@ -19,6 +19,24 @@
 | 07 | [07_RUNTIME_VALIDATION.md](07_RUNTIME_VALIDATION.md) | Diagnostics |
 | 08 | [08_TEST_PLAN.md](08_TEST_PLAN.md) | Test matrix |
 | 09 | [09_ACCEPTANCE_CRITERIA.md](09_ACCEPTANCE_CRITERIA.md) | Done definition |
+| 10 | [10_M2_AVATAR_SKELETON_SPEC.md](10_M2_AVATAR_SKELETON_SPEC.md) | **M2** runtime skeleton (implemented) |
+| 11 | [11_M2_TEST_PLAN.md](11_M2_TEST_PLAN.md) | M2 tests / benches / cert |
+| 12 | [12_M2_ACCEPTANCE.md](12_M2_ACCEPTANCE.md) | M2 acceptance |
+| 13 | [13_M2_FINAL_AUDIT.md](13_M2_FINAL_AUDIT.md) | M2 audit |
+| 14 | [14_M2_FREEZE.md](14_M2_FREEZE.md) | M2 freeze |
+| 15 | [15_M3_BIND_POSE_SPEC.md](15_M3_BIND_POSE_SPEC.md) | **M3** bind pose runtime |
+| 16 | [16_M3_TEST_PLAN.md](16_M3_TEST_PLAN.md) | M3 tests / benches / cert |
+| 17 | [17_M3_ACCEPTANCE.md](17_M3_ACCEPTANCE.md) | M3 acceptance |
+| 18 | [18_M3_FINAL_AUDIT.md](18_M3_FINAL_AUDIT.md) | M3 audit |
+| 19 | [19_M3_FREEZE.md](19_M3_FREEZE.md) | M3 freeze |
+| — | [M2_M3_FREEZE_REPORT.md](M2_M3_FREEZE_REPORT.md) | **M2+M3 joint freeze (approved)** |
+
+### Milestone freeze docs (M1)
+
+| File | Role |
+|------|------|
+| [M1_FINAL_AUDIT_FREEZE.md](M1_FINAL_AUDIT_FREEZE.md) | M1 freeze audit |
+| [M1_IMPLEMENTATION_NOTES.md](M1_IMPLEMENTATION_NOTES.md) | M1 notes |
 
 ## How to use
 
