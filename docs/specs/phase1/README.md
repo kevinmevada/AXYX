@@ -30,6 +30,11 @@
 | 18 | [18_M3_FINAL_AUDIT.md](18_M3_FINAL_AUDIT.md) | M3 audit |
 | 19 | [19_M3_FREEZE.md](19_M3_FREEZE.md) | M3 freeze |
 | — | [M2_M3_FREEZE_REPORT.md](M2_M3_FREEZE_REPORT.md) | **M2+M3 joint freeze (approved)** |
+| 20 | [20_M4_SKINNING_SPEC.md](20_M4_SKINNING_SPEC.md) | **M4** skinning runtime |
+| 21 | [21_M4_TEST_PLAN.md](21_M4_TEST_PLAN.md) | M4 tests / benches / cert |
+| 22 | [22_M4_ACCEPTANCE.md](22_M4_ACCEPTANCE.md) | M4 acceptance |
+| 23 | [23_M4_FINAL_AUDIT.md](23_M4_FINAL_AUDIT.md) | M4 audit |
+| 24 | [24_M4_FREEZE.md](24_M4_FREEZE.md) | M4 freeze |
 
 ### Milestone freeze docs (M1)
 

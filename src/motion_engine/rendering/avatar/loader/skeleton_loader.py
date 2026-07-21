@@ -108,20 +108,7 @@ class SkeletonLoader:
         name_to_index = {n: i for i, n in enumerate(names)}
         bones: list[BoneData] = []
         for i, name in enumerate(names):
-            parent_name = parents.get(name, None)
-            parent_index: int | None
-            if name in parents:
-                parent_index = (
-                    None
-                    if parent_name is None
-                    else name_to_index.get(parent_name)
-                )
-                # Parent missing from full palette → attach to root
-                if parent_name is not None and parent_index is None:
-                    parent_index = 0
-            else:
-                parent_index = None if i == 0 else 0
-
+            parent_index = self._resolve_parent_index(name, parents, name_to_index)
             loc = translations.get(name, (0.0, 0.0, 0.0))
             bw = bind_world[i] if bind_world is not None else None
             ibm = inv_bind[i] if inv_bind is not None else None
@@ -168,12 +155,7 @@ class SkeletonLoader:
         bones: list[BoneData] = []
         bind_world_map = raw.get("drive_bind_world") or {}
         for i, name in enumerate(order):
-            parent_name = parents.get(name)
-            parent_index = (
-                None
-                if parent_name is None
-                else name_to_index.get(parent_name)
-            )
+            parent_index = self._resolve_parent_index(name, parents, name_to_index)
             bw = None
             if name in bind_world_map:
                 bw = np.asarray(bind_world_map[name], dtype=np.float64)
@@ -189,6 +171,34 @@ class SkeletonLoader:
                 )
             )
         return AvatarSkeleton(name=path.stem, bones=tuple(bones))
+
+    @staticmethod
+    def _resolve_parent_index(
+        name: str,
+        parents: Mapping[str, str | None],
+        name_to_index: Mapping[str, int],
+    ) -> int | None:
+        """Map a bone to its parent index inside the active palette.
+
+        MetaHuman packs often ship a short *drive* hierarchy (``nodes``) plus a
+        much larger NPZ skinning palette. Bones with no hierarchy entry must
+        **not** be fake-parented to root — that produces a starburst overlay.
+        When a declared parent is absent from the palette, walk up ancestors
+        until a palette member is found.
+        """
+        if name not in parents:
+            return None
+        parent_name = parents[name]
+        if parent_name is None:
+            return None
+        seen: set[str] = set()
+        cur: str | None = parent_name
+        while cur is not None and cur not in name_to_index and cur not in seen:
+            seen.add(cur)
+            cur = parents.get(cur)
+        if cur is None:
+            return None
+        return int(name_to_index[cur])
 
     def _parse_hierarchy_nodes(
         self, path: Path
