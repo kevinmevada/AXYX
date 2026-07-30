@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_statistics_and_serialization as test_statistics

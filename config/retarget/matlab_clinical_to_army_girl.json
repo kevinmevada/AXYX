@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "name": "matlab_clinical_to_army_girl",
+  "source_skeleton": "matlab_clinical",
+  "target_skeleton": "army_girl",
+  "root": { "source": "Pelvis", "target": "pelvis" },
+  "source_coords": {
+    "name": "axyx",
+    "up": "z",
+    "forward": "x",
+    "handedness": "right",
+    "units_per_meter": 1.0
+  },
+  "target_coords": {
+    "name": "y_up",
+    "up": "y",
+    "forward": "z",
+    "handedness": "right",
+    "units_per_meter": 1.0
+  },
+  "bones": [
+    { "source": "Pelvis", "targets": ["pelvis"], "copy_translation": true },
+    { "source": "LHip", "targets": ["thigh_l"] },
+    { "source": "LKnee", "targets": ["calf_l"] },
+    { "source": "LAnkle", "targets": ["foot_l"] },
+    { "source": "RHip", "targets": ["thigh_r"] },
+    { "source": "RKnee", "targets": ["calf_r"] },
+    { "source": "RAnkle", "targets": ["foot_r"] },
+    { "source": "Thorax", "targets": ["spine_01", "spine_02"], "kind": "one_to_many", "optional": true },
+    { "source": "Neck", "targets": ["neck_01"], "optional": true },
+    { "source": "Head", "targets": ["head"], "optional": true },
+    { "source": "LShoulder", "targets": ["upperarm_l"], "optional": true },
+    { "source": "LElbow", "targets": ["lowerarm_l"], "optional": true },
+    { "source": "LWrist", "targets": ["hand_l"], "optional": true },
+    { "source": "RShoulder", "targets": ["upperarm_r"], "optional": true },
+    { "source": "RElbow", "targets": ["lowerarm_r"], "optional": true },
+    { "source": "RWrist", "targets": ["hand_r"], "optional": true }
+  ],
+  "chains": {
+    "left_leg": ["Pelvis", "LHip", "LKnee", "LAnkle"],
+    "right_leg": ["Pelvis", "RHip", "RKnee", "RAnkle"],
+    "torso": ["Pelvis", "Thorax", "Neck", "Head"]
+  },
+  "metadata": { "description": "Clinical Plug-in Gait → Army Girl / Unreal-style bones" }
+}

@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_slerp_halfway_90deg as test_slerp

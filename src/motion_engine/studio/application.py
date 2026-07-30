@@ -1,13 +1,9 @@
-﻿"""Application composition root for AXYX."""
-
+"""Application composition root for AXYX."""
 from __future__ import annotations
-
 import logging
 from typing import Any
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QSplashScreen
-
 from motion_engine.studio.controller import StudioController
 from motion_engine.studio.icons import splash_pixmap
 from motion_engine.studio.main_window import MainWindow
@@ -22,19 +18,16 @@ from motion_engine.studio.services.renderer_service import (
     RendererService,
 )
 from motion_engine.studio.settings import StudioSettings
-from motion_engine.studio.theme import DEFAULT_THEME, build_stylesheet
-
+from motion_engine.studio.logging_config import configure_studio_logging
+from motion_engine.studio.theme import build_stylesheet, get_theme, register_studio_fonts
 logger = logging.getLogger(__name__)
-
 
 class StudioApplication:
     """Compose services, theme, splash, and the main window.
-
     Example:
         >>> app = StudioApplication()
         >>> raise SystemExit(app.run())
     """
-
     def __init__(
         self,
         *,
@@ -55,14 +48,14 @@ class StudioApplication:
         self.app.setApplicationName("AXYX")
         self.app.setOrganizationName("AXYX")
         self.app.setStyle("Fusion")
-        self.app.setStyleSheet(build_stylesheet(DEFAULT_THEME))
-
+        register_studio_fonts()
+        configure_studio_logging()
+        self.app.setStyleSheet(build_stylesheet(get_theme(self.settings.theme_mode)))
         self.motion_service = MotionService()
         self.project_service = ProjectService(self.motion_service, self.settings)
         self.playback_service = PlaybackService()
         self.analytics_service = AnalyticsService()
         self.window = MainWindow(self.settings)
-
         if renderer is None:
             embedded = EmbeddedViewerRenderer()
             embedded.bind(self.window.viewer_canvas)
@@ -71,7 +64,6 @@ class StudioApplication:
             self.renderer = renderer
             if isinstance(renderer, EmbeddedViewerRenderer):
                 renderer.bind(self.window.viewer_canvas)
-
         self.splash: QSplashScreen | None = None
         self.controller = StudioController(
             view=self.window,
@@ -83,10 +75,8 @@ class StudioApplication:
             settings=self.settings,
         )
         self.window.attach_controller(self.controller)
-
     def run(self, *, show_splash: bool = True, auto_open: bool = False) -> int:
         """Show splash/welcome and enter the Qt event loop.
-
         Args:
             show_splash: Display the branded splash screen.
             auto_open: Immediately open the default dataset.
@@ -102,16 +92,13 @@ class StudioApplication:
                 Qt.GlobalColor.white,
             )
             self.app.processEvents()
-
         self.controller.start()
         self.window.show()
         if self.splash is not None:
             self.splash.finish(self.window)
             self.splash = None
-
         if auto_open:
             self.controller.open_default_dataset()
-
         logger.info("AXYX started")
         if self._owns_app:
             return int(self.app.exec())

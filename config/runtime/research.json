@@ -1,0 +1,14 @@
+{
+  "name": "research",
+  "fps": 100.0,
+  "avatar": "army_girl",
+  "mapping_profile": "matlab_clinical_to_army_girl",
+  "playback_mode": "retarget",
+  "root_motion": "world",
+  "mirror": false,
+  "synthetic_frames": 120,
+  "enable_profiler": true,
+  "enable_cache": true,
+  "validate_each_frame": true,
+  "log_level": "INFO"
+}

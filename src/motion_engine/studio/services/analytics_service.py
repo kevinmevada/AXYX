@@ -1,24 +1,17 @@
-﻿"""Clinical analytics service for session inspection."""
-
+"""Clinical analytics service for session inspection."""
 from __future__ import annotations
-
 import logging
 from typing import Any
-
 from motion_engine.models import Session
 from motion_engine.skeleton import Skeleton
 from motion_engine.studio.models.session_model import SessionModel
-
 logger = logging.getLogger(__name__)
-
 
 class AnalyticsService:
     """Derive clinical / statistical summaries for the inspector.
-
     Example:
         >>> AnalyticsService().session_overview(session_model)
     """
-
     def session_overview(self, session: SessionModel) -> dict[str, Any]:
         """Return overview fields for a session model."""
         duration = None
@@ -39,14 +32,12 @@ class AnalyticsService:
             "metric_count": len(session.metric_names),
             "metrics": dict(session.metrics),
         }
-
     def clinical_metrics(self, session: Session) -> dict[str, Any]:
         """Extract clinical metrics from a domain Session."""
         out: dict[str, Any] = {}
         for name, metric in session.clinical_metrics.items():
             out[name] = getattr(metric, "value", str(metric))
         return out
-
     def skeleton_stats(self, skeleton: Skeleton) -> dict[str, Any]:
         """Return reconstruction statistics for a skeleton."""
         return {
@@ -62,7 +53,6 @@ class AnalyticsService:
             "missing_markers": list(skeleton.missing_markers),
             "unresolved_joints": list(skeleton.unresolved_joints),
         }
-
     def dataset_info(
         self,
         *,

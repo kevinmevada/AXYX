@@ -1,0 +1,61 @@
+QAbstractItemView {{
+    background: transparent;
+    outline: none;
+    show-decoration-selected: 1;
+    selection-background-color: {selection_fill};
+    selection-color: {accent_pressed};
+}}
+QListWidget, QTreeWidget, QTableWidget {{
+    background: transparent;
+    border: none;
+    border-radius: {radius_md}px;
+    padding: {space_xs}px;
+    outline: none;
+    show-decoration-selected: 1;
+    selection-background-color: {selection_fill};
+    selection-color: {accent_pressed};
+}}
+QListWidget#StudioList,
+QListWidget#CohortList,
+QListWidget#RecentList,
+QListWidget#MetricsList,
+QListWidget#SessionList {{
+    background: transparent;
+    border: none;
+}}
+QListWidget::item, QTreeWidget::item, QTableWidget::item {{
+    padding: 10px {space_md}px;
+    border-radius: {radius_md}px;
+    margin: 2px 1px;
+    color: {text_primary};
+    background: transparent;
+    border: 1px solid transparent;
+}}
+QListWidget::item:selected,
+QTreeWidget::item:selected,
+QTableWidget::item:selected,
+QListWidget::item:selected:!active,
+QTreeWidget::item:selected:!active,
+QTableWidget::item:selected:!active {{
+    background: {selection_fill};
+    color: {accent_pressed};
+    border: 1px solid {accent_border};
+}}
+QListWidget::item:hover:!selected,
+QTreeWidget::item:hover:!selected,
+QTableWidget::item:hover:!selected {{
+    background: {surface_overlay};
+}}
+QListWidget::item:focus {{
+    outline: none;
+    border: 2px solid {focus_ring};
+}}
+QHeaderView::section {{
+    background: {surface};
+    color: {text_muted};
+    font-size: {size_xs}px;
+    font-weight: 600;
+    border: none;
+    border-bottom: 1px solid {border_subtle};
+    padding: {space_sm}px 10px;
+}}

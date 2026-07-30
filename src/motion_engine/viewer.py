@@ -16,7 +16,7 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 
@@ -162,6 +162,8 @@ class SkeletonViewer(Viewer):
         self.show_bone_labels = False
         self.selected_joint: str | None = None
         self.selected_bone: str | None = None
+        self.show_body = False
+        self.body_callback: Callable[[Pose], None] | None = None
 
         self._bbox_center = np.zeros(3, dtype=float)
         self._bbox_extent = 1000.0
@@ -456,47 +458,50 @@ class SkeletonViewer(Viewer):
                 self._bbox_extent * DEFAULT_AXES_LENGTH_RATIO,
             )
 
-        if self.show_bones:
-            for bone_name, bone in self.skeleton.bones.items():
-                start = pose.get_position(bone.parent_joint)
-                end = pose.get_position(bone.child_joint)
-                if start is None or end is None:
-                    continue
-                if not (np.all(np.isfinite(start)) and np.all(np.isfinite(end))):
-                    continue
-                color = (
-                    self.theme.bone_highlight
-                    if bone_name == self.selected_bone
-                    else self.theme.bone
-                )
-                self.renderer.draw_line(
-                    start, end, color, width=3.0, name=f"bone:{bone_name}"
-                )
-                if self.show_bone_labels:
-                    mid = 0.5 * (np.asarray(start) + np.asarray(end))
-                    self.renderer.draw_label_3d(
-                        bone_name, mid, self.theme.label
+        if self.show_body and self.body_callback is not None:
+            self.body_callback(pose)
+        else:
+            if self.show_bones:
+                for bone_name, bone in self.skeleton.bones.items():
+                    start = pose.get_position(bone.parent_joint)
+                    end = pose.get_position(bone.child_joint)
+                    if start is None or end is None:
+                        continue
+                    if not (np.all(np.isfinite(start)) and np.all(np.isfinite(end))):
+                        continue
+                    color = (
+                        self.theme.bone_highlight
+                        if bone_name == self.selected_bone
+                        else self.theme.bone
                     )
+                    self.renderer.draw_line(
+                        start, end, color, width=3.0, name=f"bone:{bone_name}"
+                    )
+                    if self.show_bone_labels:
+                        mid = 0.5 * (np.asarray(start) + np.asarray(end))
+                        self.renderer.draw_label_3d(
+                            bone_name, mid, self.theme.label
+                        )
 
-        if self.show_joints:
-            for joint_name, position in pose.joint_positions.items():
-                if not np.all(np.isfinite(position)):
-                    continue
-                color = (
-                    self.theme.selected
-                    if joint_name == self.selected_joint
-                    else self.theme.joint
-                )
-                self.renderer.draw_sphere(
-                    position,
-                    self._joint_radius * _joint_radius_scale(joint_name),
-                    color,
-                    name=f"joint:{joint_name}",
-                )
-                if self.show_joint_labels:
-                    self.renderer.draw_label_3d(
-                        joint_name, position, self.theme.label
+            if self.show_joints:
+                for joint_name, position in pose.joint_positions.items():
+                    if not np.all(np.isfinite(position)):
+                        continue
+                    color = (
+                        self.theme.selected
+                        if joint_name == self.selected_joint
+                        else self.theme.joint
                     )
+                    self.renderer.draw_sphere(
+                        position,
+                        self._joint_radius * _joint_radius_scale(joint_name),
+                        color,
+                        name=f"joint:{joint_name}",
+                    )
+                    if self.show_joint_labels:
+                        self.renderer.draw_label_3d(
+                            joint_name, position, self.theme.label
+                        )
 
         self.renderer.set_camera(self.camera.get_state())
         self.camera.clear_dirty()

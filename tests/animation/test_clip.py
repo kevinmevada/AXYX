@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_clip_duration_extends as test_clip

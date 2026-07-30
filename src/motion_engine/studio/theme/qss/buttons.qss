@@ -1,0 +1,156 @@
+QPushButton {{
+    background: {control};
+    border: 1px solid {glass_edge};
+    border-radius: {radius_md}px;
+    padding: 10px 18px;
+    font-weight: 600;
+    color: {text_primary};
+}}
+QPushButton:hover {{
+    background: {glass_strong};
+    border-color: {border_strong};
+}}
+QPushButton:pressed {{
+    background: {surface_sunken};
+}}
+QPushButton:disabled {{
+    color: {text_disabled};
+    border-color: {border_subtle};
+}}
+QPushButton:focus {{
+    border: 2px solid {focus_ring};
+    padding: 9px 17px;
+}}
+QPushButton#PrimaryButton {{
+    background: {accent};
+    border: 1px solid {accent};
+    color: {text_on_accent};
+    border-radius: {radius_md}px;
+    padding: 12px 24px;
+    font-size: {size_lg}px;
+}}
+QPushButton#PrimaryButton:hover {{
+    background: {accent_hover};
+    border-color: {accent_hover};
+}}
+QPushButton#PrimaryButton:pressed {{
+    background: {accent_pressed};
+    border-color: {accent_pressed};
+}}
+QPushButton#GhostButton {{
+    background: transparent;
+    border: 1px solid transparent;
+    color: {text_secondary};
+}}
+QPushButton#GhostButton:hover {{
+    background: {surface_overlay};
+    color: {text_primary};
+}}
+QPushButton#WorkspaceChip {{
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: {radius_pill}px;
+    padding: 7px 14px;
+    font-weight: 600;
+    font-size: {size_sm}px;
+    color: {text_secondary};
+}}
+QPushButton#WorkspaceChip:hover {{
+    background: {surface_overlay};
+    color: {text_primary};
+}}
+QPushButton#WorkspaceChip:checked {{
+    background: {selection_fill};
+    border: 1px solid {accent_border};
+    color: {accent_pressed};
+}}
+QPushButton#SegmentButton {{
+    background: {control};
+    border: 1px solid {border};
+    border-radius: 0px;
+    padding: 4px 10px;
+    font-weight: 600;
+    font-size: {size_xs}px;
+    min-width: 44px;
+    max-height: 28px;
+    color: {text_secondary};
+}}
+QPushButton#SegmentButton[segment="first"] {{
+    border-top-left-radius: {radius_md}px;
+    border-bottom-left-radius: {radius_md}px;
+}}
+QPushButton#SegmentButton[segment="last"] {{
+    border-top-right-radius: {radius_md}px;
+    border-bottom-right-radius: {radius_md}px;
+}}
+QPushButton#SegmentButton:checked {{
+    background: {selection_fill};
+    color: {accent_pressed};
+    border-color: {accent_border};
+}}
+QPushButton#SegmentButton:hover:!checked {{
+    background: {surface_raised};
+}}
+QToolButton {{
+    background: {control};
+    border: 1px solid {glass_edge};
+    border-radius: {radius_md}px;
+    padding: 8px 12px;
+    font-weight: 600;
+    color: {text_primary};
+}}
+QToolButton:hover {{
+    background: {glass_strong};
+    border-color: {accent_border};
+}}
+QToolButton:checked, QToolButton:pressed {{
+    background: {selection_fill};
+    color: {accent_pressed};
+    border-color: {accent_border};
+}}
+QToolButton:focus {{
+    border: 2px solid {focus_ring};
+}}
+QToolButton#TransportButton {{
+    border-radius: {radius_pill}px;
+    padding: 4px;
+    min-width: 28px;
+    min-height: 28px;
+    max-width: 28px;
+    max-height: 28px;
+    background: {control};
+}}
+QToolButton#TransportButton:checked,
+QToolButton#TransportButton:pressed {{
+    background: {accent};
+    color: {text_on_accent};
+    border-color: {accent};
+}}
+QToolButton#LoopButton {{
+    min-height: 28px;
+    max-height: 28px;
+    padding: 3px 10px;
+    border-radius: {radius_pill}px;
+    color: {text_secondary};
+}}
+QToolButton#LoopButton:checked {{
+    background: {selection_fill};
+    color: {accent_pressed};
+    border-color: {accent_border};
+}}
+QToolButton#IconChrome {{
+    background: {control};
+    border: 1px solid {glass_edge};
+    padding: 4px 8px;
+    border-radius: {radius_md}px;
+    max-height: 28px;
+}}
+QToolButton#IconChrome:hover {{
+    background: {glass_strong};
+    border-color: {accent_border};
+}}
+QToolButton#IconChrome:checked {{
+    background: {selection_fill};
+    border-color: {accent_border};
+    color: {accent_pressed};
+}}

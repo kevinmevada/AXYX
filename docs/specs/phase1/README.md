@@ -35,6 +35,22 @@
 | 22 | [22_M4_ACCEPTANCE.md](22_M4_ACCEPTANCE.md) | M4 acceptance |
 | 23 | [23_M4_FINAL_AUDIT.md](23_M4_FINAL_AUDIT.md) | M4 audit |
 | 24 | [24_M4_FREEZE.md](24_M4_FREEZE.md) | M4 freeze |
+| 25 | [25_M5_ANIMATION_SPEC.md](25_M5_ANIMATION_SPEC.md) | **M5** animation runtime |
+| 26 | [26_M5_TEST_PLAN.md](26_M5_TEST_PLAN.md) | M5 tests / benches / cert |
+| 27 | [27_M5_ACCEPTANCE.md](27_M5_ACCEPTANCE.md) | M5 acceptance |
+| 28 | [28_M5_FINAL_AUDIT.md](28_M5_FINAL_AUDIT.md) | M5 audit |
+| 29 | [29_M5_FREEZE.md](29_M5_FREEZE.md) | M5 freeze |
+| 30 | [30_M6_RETARGET_SPEC.md](30_M6_RETARGET_SPEC.md) | **M6** motion retargeting |
+| 31 | [31_M6_TEST_PLAN.md](31_M6_TEST_PLAN.md) | M6 tests / benches / cert |
+| 32 | [32_M6_ACCEPTANCE.md](32_M6_ACCEPTANCE.md) | M6 acceptance |
+| 33 | [33_M6_FINAL_AUDIT.md](33_M6_FINAL_AUDIT.md) | M6 audit |
+| 34 | [34_M6_FREEZE.md](34_M6_FREEZE.md) | M6 freeze |
+| 35 | [35_M7_RUNTIME.md](35_M7_RUNTIME.md) | **M7** digital twin runtime |
+| 36 | [36_M7_TEST_PLAN.md](36_M7_TEST_PLAN.md) | M7 tests / benches / cert |
+| 37 | [37_SYSTEM_CERTIFICATION.md](37_SYSTEM_CERTIFICATION.md) | Phase 1 system certification |
+| 38 | [38_PHASE1_FINAL_AUDIT.md](38_PHASE1_FINAL_AUDIT.md) | Phase 1 audit |
+| 39 | [39_PHASE1_FREEZE.md](39_PHASE1_FREEZE.md) | Phase 1 freeze |
+| 40 | [40_PHASE1_ARCHITECTURE.md](40_PHASE1_ARCHITECTURE.md) | Phase 1 architecture map |
 
 ### Milestone freeze docs (M1)
 

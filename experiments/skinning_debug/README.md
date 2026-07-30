@@ -13,7 +13,7 @@ cd C:\Users\mevad\Desktop\AXYX
 # Synthetic 2-bone fixture (always works)
 python -m experiments.skinning_debug.run --fixture
 
-# Army girl FBX (full body mesh)
+# Army girl FBX (full body mesh) + M5 animation controls
 python -m experiments.skinning_debug.run --army-girl
 
 # Local MetaHuman pack (assets/avatars/metahuman) — NPZ caches are partial
@@ -31,17 +31,18 @@ python -m pip install pyvista pyvistaqt PySide6
 - Mesh / wireframe / weight heatmap
 - Skeleton bones + joints overlay
 - Bone picker + XYZ rotation sliders (−180°…180°)
+- M5 Animation: clip dropdown, Play / Pause / Stop, Loop, timeline, speed
 - Reset to bind
-- Diagnostics (vert/bone counts, LBS CPU time, PASS/FAIL)
+- Diagnostics (vert/bone counts, LBS CPU time, anim time/frame, PASS/FAIL)
 
 ## Manual test checklist
 
 1. Bind pose — no distortion  
 2. Rotate `upperarm_l` (or fixture `forearm`)  
-3. Rotate `spine_01` / `head` / `thigh_l`  
-4. Weight heatmap for selected bone  
-5. Skeleton overlay inside mesh  
-6. Stress angles 0→45→90→135→180  
+3. Play Idle / Walk / Run / Jump clips  
+4. Seek timeline + change speed  
+5. Weight heatmap for selected bone  
+6. Skeleton overlay inside mesh  
 
 ## Automated sweep
 

@@ -1,0 +1,57 @@
+QTabWidget::pane {{
+    border: none;
+    background: transparent;
+}}
+QTabBar::tab {{
+    background: transparent;
+    color: {text_muted};
+    padding: 8px 14px;
+    margin-right: 4px;
+    border-radius: {radius_md}px;
+    font-weight: 600;
+    font-size: {size_sm}px;
+}}
+QTabBar::tab:selected {{
+    color: {accent_pressed};
+    background: {selection_fill};
+}}
+QTabBar::tab:hover:!selected {{
+    color: {text_primary};
+    background: {surface_overlay};
+}}
+QTabBar::tab:focus {{
+    border: 2px solid {focus_ring};
+}}
+QMenuBar {{
+    background: {background};
+    color: {text_secondary};
+    border-bottom: 1px solid {border_subtle};
+    padding: 2px {space_xs}px;
+}}
+QMenuBar::item {{
+    padding: 6px {space_md}px;
+    border-radius: {radius_sm}px;
+}}
+QMenuBar::item:selected {{
+    background: {surface_overlay};
+    color: {text_primary};
+}}
+QMenu {{
+    background: {glass_strong};
+    border: 1px solid {glass_edge};
+    border-radius: {radius_lg}px;
+    padding: 8px;
+}}
+QMenu::item {{
+    padding: {space_sm}px 28px {space_sm}px {space_md}px;
+    border-radius: {radius_sm}px;
+}}
+QMenu::item:selected {{
+    background: {selection_fill};
+    color: {accent_pressed};
+}}
+QMenu::separator {{
+    height: 1px;
+    background: {border_subtle};
+    margin: 6px {space_xs}px;
+}}

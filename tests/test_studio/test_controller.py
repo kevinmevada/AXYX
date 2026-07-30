@@ -45,6 +45,9 @@ class FakeView:
     def show_loading(self, message: str | None) -> None:
         self.loading = message
 
+    def show_loading_progress(self, value: int) -> None:
+        pass
+
     def set_subjects(self, subjects: list[SubjectModel]) -> None:
         self.subjects = subjects
 
@@ -107,6 +110,15 @@ class FakeView:
 
 
 def test_controller_dataset_subject_session_flow(tmp_path) -> None:
+    from PySide6.QtCore import QCoreApplication, QThreadPool
+    from PySide6.QtWidgets import QApplication
+
+    QApplication.instance() or QApplication([])
+
+    def flush_tasks(timeout_ms: int = 120_000) -> None:
+        QThreadPool.globalInstance().waitForDone(timeout_ms)
+        QCoreApplication.processEvents()
+
     settings = StudioSettings(
         organization="AXYXTest",
         application=f"Studio-{tmp_path.name}",
@@ -131,12 +143,14 @@ def test_controller_dataset_subject_session_flow(tmp_path) -> None:
     assert view.welcome_visible is True
 
     controller.open_default_dataset()
+    flush_tasks()
     assert view.welcome_visible is False
     assert len(view.subjects) >= 1
 
     controller.select_subject("S2")
     assert view.sessions
     controller.select_session("WU01")
+    flush_tasks()
     assert view.playback is not None
     assert view.playback.frame_count > 0
     assert view.skeleton_frames

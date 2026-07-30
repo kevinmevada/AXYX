@@ -39,6 +39,7 @@ class LoadingOverlay(QWidget):
     def show_message(self, message: str) -> None:
         """Show the overlay with ``message``."""
         self._label.setText(message)
+        self.set_indeterminate(True)
         if self.parentWidget() is not None:
             self.setGeometry(self.parentWidget().rect())
         self.raise_()
@@ -47,6 +48,20 @@ class LoadingOverlay(QWidget):
         self._fade.setStartValue(self._opacity.opacity())
         self._fade.setEndValue(0.82)
         self._fade.start()
+
+    def set_indeterminate(self, indeterminate: bool) -> None:
+        """Switch between indeterminate and determinate progress."""
+        if indeterminate:
+            self._bar.setRange(0, 0)
+        else:
+            self._bar.setRange(0, 100)
+
+    def set_progress(self, value: int, message: str | None = None) -> None:
+        """Update determinate progress (0–100) and optional status text."""
+        self.set_indeterminate(False)
+        self._bar.setValue(max(0, min(100, int(value))))
+        if message is not None:
+            self._label.setText(message)
 
     def hide_overlay(self) -> None:
         """Fade out then hide the overlay."""

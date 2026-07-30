@@ -312,6 +312,9 @@ class PyVistaRenderer(Renderer):
         self._bone_segs: list[tuple[np.ndarray, np.ndarray]] = []
         self._bone_colors: list[ColorRGB] = []
         self._bone_seg_names: list[str] = []
+        self._avatar_pts: np.ndarray | None = None
+        self._avatar_faces: np.ndarray | None = None
+        self._avatar_mesh: Any | None = None
         self._ground_args: tuple[float, ColorRGB, np.ndarray] | None = None
         self._grid_args: tuple[float, int, ColorRGB, np.ndarray] | None = None
         self._axes_args: tuple[np.ndarray, float] | None = None
@@ -423,6 +426,7 @@ class PyVistaRenderer(Renderer):
         self._bone_seg_names.clear()
         self._foot_positions.clear()
         self._labels.clear()
+        self._avatar_pts = None
 
     def draw_sphere(
         self,
@@ -454,6 +458,23 @@ class PyVistaRenderer(Renderer):
         )
         self._bone_colors.append(color)
         self._bone_seg_names.append(name)
+
+    def set_avatar_topology(self, faces: np.ndarray, vertex_count: int) -> None:
+        """Install static skinned-mesh topology (faces) for in-place updates."""
+        self._avatar_faces = np.asarray(faces, dtype=np.int64)
+        self._avatar_mesh = None
+        self._remove_actor("avatar_body")
+
+    def draw_avatar_body(self, positions: np.ndarray) -> None:
+        """Queue deformed avatar vertex positions for the next render flush."""
+        self._avatar_pts = np.asarray(positions, dtype=np.float64)
+
+    def clear_avatar(self) -> None:
+        """Remove avatar mesh from the viewport."""
+        self._avatar_pts = None
+        self._avatar_faces = None
+        self._avatar_mesh = None
+        self._remove_actor("avatar_body")
 
     def draw_ground(
         self,
@@ -506,6 +527,7 @@ class PyVistaRenderer(Renderer):
         if self._plotter is None:
             return
         self._flush_environment()
+        self._flush_avatar()
         self._flush_skeleton()
         self._update_contact_shadows()
         if self._pending_camera is not None:
@@ -1084,6 +1106,29 @@ class PyVistaRenderer(Renderer):
 
     def _flush_skeleton(self) -> None:
         assert self._plotter is not None
+        if self._avatar_pts is not None:
+            self._remove_actor("bones")
+            self._remove_actor("labels")
+            if self._joint_pts:
+                has_labels = False
+                sig = self._skeleton_signature(has_labels)
+                if (
+                    self._skeleton_sig == sig
+                    and "joints" in self._actors
+                    and not self._bone_segs
+                ):
+                    self._update_skeleton_positions()
+                else:
+                    self._bone_segs.clear()
+                    self._bone_colors.clear()
+                    self._bone_seg_names.clear()
+                    self._invalidate_skeleton_cache()
+                    self._skeleton_sig = sig
+                    self._build_skeleton_actors(has_labels)
+            else:
+                self._remove_actor("joints")
+                self._invalidate_skeleton_cache()
+            return
         has_labels = bool(self._labels)
         sig = self._skeleton_signature(has_labels)
         if self._skeleton_sig == sig:
@@ -1214,6 +1259,42 @@ class PyVistaRenderer(Renderer):
             )
             self._actors["labels"] = actor
             self._labels.clear()
+
+    def _flush_avatar(self) -> None:
+        assert self._plotter is not None
+        if self._avatar_pts is None or self._avatar_faces is None:
+            return
+        pts = self._avatar_pts
+        if self._avatar_mesh is None:
+            grid = self._pv.PolyData(pts, self._avatar_faces)
+            actor = self._plotter.add_mesh(
+                grid,
+                color="#c4a484",
+                smooth_shading=True,
+                name="avatar_body",
+                render=False,
+            )
+            self._apply_pbr(actor, metallic=0.08, roughness=0.62, specular=0.35)
+            self._actors["avatar_body"] = actor
+            self._avatar_mesh = grid
+        else:
+            if self._avatar_mesh.n_points != pts.shape[0]:
+                self._remove_actor("avatar_body")
+                self._avatar_mesh = None
+                grid = self._pv.PolyData(pts, self._avatar_faces)
+                actor = self._plotter.add_mesh(
+                    grid,
+                    color="#c4a484",
+                    smooth_shading=True,
+                    name="avatar_body",
+                    render=False,
+                )
+                self._apply_pbr(actor, metallic=0.08, roughness=0.62, specular=0.35)
+                self._actors["avatar_body"] = actor
+                self._avatar_mesh = grid
+                return
+            self._avatar_mesh.points = pts
+            self._avatar_mesh.Modified()
 
     def _update_skeleton_positions(self) -> None:
         assert self._plotter is not None

@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class SceneGraph:
-    """Rooted tree of scene nodes.
+    """Rooted tree of scene nodes used as the Studio viewport read model.
 
-    Today the PyVista path still uses draw queues; this graph is the
-    forward-looking structure avatars, ground, and lights will attach to.
+    PyVista still owns the draw queues. SceneGraph describes session layers
+    (skeleton / avatar / ground) for inspector, status, and visibility toggles.
     """
 
     def __init__(self, name: str = "root") -> None:

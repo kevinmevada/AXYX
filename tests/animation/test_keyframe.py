@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_keyframe_normalizes_quat as test_keyframe

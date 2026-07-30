@@ -38,6 +38,7 @@ class TimelineDock(QWidget):
     loopChanged = Signal(bool)
     frameSeeked = Signal(int)
     resetCameraClicked = Signal()
+    playPauseToggled = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -57,16 +58,21 @@ class TimelineDock(QWidget):
         self._timecode = QLabel("00:00.00")
         self._timecode.setObjectName("TimecodeLabel")
 
-        self._play = self._btn("Play (Space)", icon_play(ICON_SM), "Space")
-        self._play.clicked.connect(self.playClicked.emit)
+        self._play = self._btn("Play (Space)", icon_play(ICON_SM), "")
+        self._play.setAccessibleName("Play")
+        self._play.clicked.connect(self._on_play_clicked)
         self._pause = self._btn("Pause", icon_pause(ICON_SM), "")
+        self._pause.setAccessibleName("Pause")
         self._pause.setCheckable(True)
         self._pause.clicked.connect(self.pauseClicked.emit)
         self._stop = self._btn("Stop (Home)", icon_stop(ICON_SM), "Home")
+        self._stop.setAccessibleName("Stop")
         self._stop.clicked.connect(self.stopClicked.emit)
         self._prev = self._btn("Previous (←)", icon_prev(ICON_SM), "Left")
+        self._prev.setAccessibleName("Previous frame")
         self._prev.clicked.connect(self.previousClicked.emit)
         self._next = self._btn("Next (→)", icon_next(ICON_SM), "Right")
+        self._next.setAccessibleName("Next frame")
         self._next.clicked.connect(self.nextClicked.emit)
 
         self._speed = QComboBox()
@@ -110,6 +116,7 @@ class TimelineDock(QWidget):
         self._preview.hide()
         self._slider = QSlider(Qt.Orientation.Horizontal)
         self._slider.setObjectName("TimelineScrubber")
+        self._slider.setAccessibleName("Timeline scrubber")
         self._slider.setMinimum(0)
         self._slider.setMaximum(0)
         self._slider.setFixedHeight(28)
@@ -128,6 +135,13 @@ class TimelineDock(QWidget):
         self._scrubbing = False
         self.playback_toolbar = self
         self.timeline = self
+
+    def _on_play_clicked(self) -> None:
+        self.playClicked.emit()
+
+    def toggle_play_pause(self) -> None:
+        """Emit play/pause toggle (wired from command shortcut)."""
+        self.playPauseToggled.emit()
 
     @staticmethod
     def _btn(tip: str, icon, shortcut: str) -> QToolButton:

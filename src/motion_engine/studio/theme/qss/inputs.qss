@@ -1,0 +1,144 @@
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {{
+    background: {control};
+    border: 1px solid {glass_edge};
+    border-radius: {radius_md}px;
+    padding: 10px {space_md}px;
+    selection-background-color: {accent};
+    selection-color: {text_on_accent};
+    color: {text_primary};
+}}
+QLineEdit:hover, QComboBox:hover {{
+    border-color: {border_strong};
+    background: {glass_strong};
+}}
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {{
+    border: 2px solid {focus_ring};
+    background: {surface_raised};
+    padding: 9px 15px;
+}}
+QLineEdit:disabled, QComboBox:disabled {{
+    color: {text_disabled};
+}}
+QLineEdit#SearchField {{
+    border-radius: {radius_pill}px;
+    background: {control};
+    padding-left: {space_md}px;
+}}
+QComboBox#CompactSpeed {{
+    min-height: 30px;
+    max-height: 30px;
+    padding: 2px 18px 2px 8px;
+    font-family: {font_family_mono};
+    font-size: {size_xs}px;
+}}
+QComboBox#CompactSpeed:focus {{
+    padding: 1px 17px 1px 7px;
+}}
+QComboBox::drop-down {{
+    border: none;
+    width: {space_xl}px;
+}}
+QComboBox QAbstractItemView {{
+    background: {surface_raised};
+    border: 1px solid {border};
+    border-radius: {radius_md}px;
+    selection-background-color: {selection_fill};
+    selection-color: {accent_pressed};
+    padding: {space_xs}px;
+    outline: none;
+}}
+QSlider::groove:horizontal {{
+    height: 4px;
+    background: {surface_sunken};
+    border-radius: 2px;
+}}
+QSlider::sub-page:horizontal {{
+    background: {accent};
+    border-radius: 2px;
+}}
+QSlider::handle:horizontal {{
+    width: 16px;
+    height: 16px;
+    margin: -6px 0;
+    border-radius: 8px;
+    background: {surface_raised};
+    border: 2px solid {accent};
+}}
+QSlider::handle:horizontal:hover {{
+    background: {accent_hover};
+    border-color: {accent_hover};
+}}
+QSlider#TimelineScrubber::groove:horizontal {{
+    height: 8px;
+    background: {surface_sunken};
+    border-radius: 4px;
+}}
+QSlider#TimelineScrubber::sub-page:horizontal {{
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 {accent}, stop:1 {cyan});
+    border-radius: 4px;
+}}
+QSlider#TimelineScrubber::handle:horizontal {{
+    width: 18px;
+    height: 18px;
+    margin: -6px 0;
+    border-radius: 9px;
+    background: {surface_raised};
+    border: 2px solid {accent};
+}}
+QScrollBar:vertical {{
+    background: transparent;
+    width: 8px;
+    margin: {space_xs}px 1px;
+}}
+QScrollBar::handle:vertical {{
+    background: {border_strong};
+    border-radius: 4px;
+    min-height: {space_xl}px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {text_muted};
+}}
+QScrollBar:horizontal {{
+    background: transparent;
+    height: 8px;
+}}
+QScrollBar::handle:horizontal {{
+    background: {border_strong};
+    border-radius: 4px;
+    min-width: {space_xl}px;
+}}
+QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; width: 0; }}
+QScrollBar::add-page, QScrollBar::sub-page {{ background: none; }}
+QProgressBar {{
+    background: {surface_sunken};
+    border: none;
+    border-radius: {radius_sm}px;
+    text-align: center;
+    color: {text_secondary};
+    min-height: 6px;
+}}
+QProgressBar::chunk {{
+    background: {accent};
+    border-radius: {radius_sm}px;
+}}
+QCheckBox, QRadioButton {{
+    spacing: {space_sm}px;
+    color: {text_secondary};
+    font-weight: 600;
+}}
+QCheckBox::indicator, QRadioButton::indicator {{
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid {border_strong};
+    background: {control};
+}}
+QCheckBox::indicator {{ border-radius: 5px; }}
+QRadioButton::indicator {{ border-radius: 9px; }}
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {{
+    background: {success};
+    border-color: {success};
+}}
+QCheckBox::indicator:hover {{
+    border-color: {accent};
+}}

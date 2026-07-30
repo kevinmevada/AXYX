@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_blending_and_weights as test_blending

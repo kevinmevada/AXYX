@@ -1,17 +1,14 @@
-﻿"""Embedded PyVista motion viewport for AXYX.
-
+"""Embedded PyVista motion viewport for AXYX.
 Hosts the existing Motion Engine :class:`PyVistaRenderer` inside the studio
 center panel so walking skeletons appear in the same application window.
 """
-
 from __future__ import annotations
-
 import logging
 import os
+import threading
 import time
 from typing import Any
-
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QThread, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -20,35 +17,47 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from motion_engine.colors import get_theme
+from motion_engine.rendering.runtime._assets import load_army_girl_avatar
+from motion_engine.rendering.runtime.studio_viewport import DigitalTwinViewportBridge
 from motion_engine.renderer import PyVistaRenderer
-from motion_engine.skeleton import Skeleton
+from motion_engine.skeleton import Pose, Skeleton
 from motion_engine.studio.theme import DEFAULT_THEME
 from motion_engine.studio.widgets.error_banner import ErrorBanner
 from motion_engine.studio.widgets.viewport_toolbar import ViewportToolbar
 from motion_engine.viewer import SkeletonViewer
-
 logger = logging.getLogger(__name__)
-
-# Must be set before importing pyvistaqt so Qt binding resolves to PySide6.
 os.environ.setdefault("QT_API", "pyside6")
-
 
 def _is_offscreen_platform() -> bool:
     platform = os.environ.get("QT_QPA_PLATFORM", "").strip().lower()
     return platform in {"offscreen", "minimal", "null"}
 
+class _AvatarPrepWorker(QThread):
+    """Prepare retarget pipeline off the UI thread (no overlay)."""
+    finished = Signal(object, str)
+    def __init__(self, skeleton: Skeleton, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._skeleton = skeleton
+    def run(self) -> None:
+        bridge = DigitalTwinViewportBridge()
+        try:
+            ok = bridge.prepare(self._skeleton)
+        except Exception as exc:  # noqa: BLE001
+            self.finished.emit(None, str(exc))
+            return
+        if ok:
+            self.finished.emit(bridge, "")
+        else:
+            self.finished.emit(None, bridge.error or "Avatar failed to load")
 
 class ViewerCanvas(QFrame):
     """Center-panel PyVista viewport bound to studio playback."""
-
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("CenterPanel")
         self.setMinimumHeight(280)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
         self._skeleton: Skeleton | None = None
         self._frame = 0
         self._plotter: Any = None
@@ -57,22 +66,20 @@ class ViewerCanvas(QFrame):
         self._ready = False
         self._init_error: str | None = None
         self._pending_skeleton: Skeleton | None = None
-
+        self._digital_twin_enabled = False
+        self._dt_bridge = DigitalTwinViewportBridge()
+        self._prep_worker: _AvatarPrepWorker | None = None
+        self._prep_token = 0
         self._drag_mode: str | None = None
         self._last_mouse = (0, 0)
         self._last_click_t = 0.0
         self._last_camera_tick = time.perf_counter()
         self._camera_obs: list[tuple[Any, str, int]] = []
-
-        self._title = QLabel("")
-        self._title.setObjectName("SectionLabel")
-        self._title.hide()
         self._hint = QLabel("Select a session")
         self._hint.setObjectName("MutedLabel")
         self._error = ErrorBanner()
         self.toolbar = ViewportToolbar()
         self._wire_toolbar()
-
         self._host = QWidget(self)
         self._host.setObjectName("ViewportStage")
         self._host.setSizePolicy(
@@ -81,12 +88,10 @@ class ViewerCanvas(QFrame):
         self._host_layout = QVBoxLayout(self._host)
         self._host_layout.setContentsMargins(0, 0, 0, 0)
         self._host_layout.setSpacing(0)
-
         chrome = QWidget()
         chrome_layout = QVBoxLayout(chrome)
         chrome_layout.setContentsMargins(0, 0, 0, 0)
         chrome_layout.setSpacing(DEFAULT_THEME.spacing.xs)
-
         row = QWidget()
         tr = QHBoxLayout(row)
         tr.setContentsMargins(0, 0, 0, 0)
@@ -95,18 +100,15 @@ class ViewerCanvas(QFrame):
         tr.addWidget(self._hint)
         chrome_layout.addWidget(row)
         chrome_layout.addWidget(self._error)
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(DEFAULT_THEME.spacing.sm)
         layout.addWidget(chrome)
         layout.addWidget(self._host, stretch=1)
-
         self._camera_timer = QTimer(self)
         self._camera_timer.setTimerType(Qt.TimerType.PreciseTimer)
-        self._camera_timer.setInterval(8)  # 120 Hz — only renders when camera moves
+        self._camera_timer.setInterval(8)
         self._camera_timer.timeout.connect(self._tick_camera)
-
     def _wire_toolbar(self) -> None:
         self.toolbar.cameraPresetRequested.connect(self.set_camera_preset)
         self.toolbar.resetCameraRequested.connect(self.reset_camera)
@@ -115,8 +117,10 @@ class ViewerCanvas(QFrame):
         self.toolbar.groundToggled.connect(self.set_ground_visible)
         self.toolbar.lightingToggled.connect(self.set_lighting_enabled)
         self.toolbar.fullscreenRequested.connect(self._on_fullscreen)
-
-    def showEvent(self, event) -> None:  # noqa: N802 - Qt API
+        self.toolbar.digitalTwinToggled.connect(self.set_digital_twin_enabled)
+        if hasattr(self.toolbar, "_avatar_btn"):
+            self.toolbar._avatar_btn.setChecked(self._digital_twin_enabled)
+    def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
         if not _is_offscreen_platform():
             self._ensure_viewport()
@@ -124,9 +128,15 @@ class ViewerCanvas(QFrame):
                 skeleton = self._pending_skeleton
                 self._pending_skeleton = None
                 self.set_skeleton(skeleton, self._frame)
-
+    def _preload_avatar_assets(self) -> None:
+        def _run() -> None:
+            try:
+                load_army_girl_avatar()
+                logger.info("Army Girl avatar preloaded")
+            except Exception:
+                logger.debug("Avatar preload skipped", exc_info=True)
+        threading.Thread(target=_run, daemon=True, name="avatar-preload").start()
     def _ensure_viewport(self) -> bool:
-        """Create the embedded QtInteractor + PyVista renderer once."""
         if self._ready:
             return True
         if self._init_error is not None:
@@ -136,7 +146,6 @@ class ViewerCanvas(QFrame):
             return False
         try:
             from pyvistaqt import QtInteractor
-
             plotter = QtInteractor(self._host)
             self._host_layout.addWidget(plotter.interactor)
             theme = get_theme("studio")
@@ -151,17 +160,17 @@ class ViewerCanvas(QFrame):
                 backend="pyvista",
                 block=False,
             )
+            self._viewer.body_callback = self._draw_avatar_body
             try:
                 self._install_clinical_camera(plotter)
             except Exception:
-                logger.exception(
-                    "Clinical camera controls failed; falling back to default PyVista camera"
-                )
+                logger.exception("Clinical camera controls failed")
             self._camera_timer.start()
             self._ready = True
+            self._preload_avatar_assets()
             logger.info("Embedded PyVista viewport ready")
             return True
-        except Exception as exc:  # noqa: BLE001 - surface in UI
+        except Exception as exc:  # noqa: BLE001
             self._init_error = str(exc)
             logger.exception("Failed to initialize embedded viewport")
             self._error.show_error(
@@ -170,45 +179,35 @@ class ViewerCanvas(QFrame):
             )
             self._hint.setText("3D viewport could not start.")
             return False
-
     def _install_clinical_camera(self, plotter: Any) -> None:
-        """Replace free trackball with constrained orbit / pan / zoom."""
         iren = getattr(plotter, "iren", None)
         if iren is None:
             return
-
         try:
             from vtkmodules.vtkInteractionStyle import vtkInteractorStyleUser
         except Exception:
             try:
                 from vtk.vtkInteractionStyle import vtkInteractorStyleUser  # type: ignore
             except Exception:
-                logger.debug("Clinical camera style unavailable", exc_info=True)
                 return
-
-        # PyVista wraps VTK - set style via ``iren.style``, not SetInteractorStyle.
         try:
             iren.style = vtkInteractorStyleUser()
         except Exception:
             try:
                 iren.interactor.SetInteractorStyle(vtkInteractorStyleUser())
             except Exception:
-                logger.debug("Could not install clinical interactor style", exc_info=True)
                 return
-
         def _event_pos() -> tuple[int, int]:
             try:
                 return tuple(iren.get_event_position())  # type: ignore[return-value]
             except Exception:
                 return tuple(iren.interactor.GetEventPosition())  # type: ignore[return-value]
-
         def _obs(event: str, callback) -> None:
             try:
                 tag = iren.add_observer(event, callback, interactor_style_fallback=False)
             except TypeError:
                 tag = iren.add_observer(event, callback)
             self._camera_obs.append((iren, event, tag))
-
         def on_left_press(_obj, _evt) -> None:
             now = time.perf_counter()
             if now - self._last_click_t < 0.35:
@@ -219,18 +218,14 @@ class ViewerCanvas(QFrame):
             self._last_click_t = now
             self._drag_mode = "orbit"
             self._last_mouse = _event_pos()
-
         def on_middle_press(_obj, _evt) -> None:
             self._drag_mode = "pan"
             self._last_mouse = _event_pos()
-
         def on_right_press(_obj, _evt) -> None:
             self._drag_mode = "pan"
             self._last_mouse = _event_pos()
-
         def on_release(_obj, _evt) -> None:
             self._drag_mode = None
-
         def on_move(_obj, _evt) -> None:
             if self._viewer is None or self._drag_mode is None:
                 return
@@ -243,17 +238,12 @@ class ViewerCanvas(QFrame):
                 cam.orbit(dx, dy)
             elif self._drag_mode == "pan":
                 cam.pan(dx, dy)
-            elif self._drag_mode == "dolly":
-                cam.zoom(dy)
-
         def on_wheel_forward(_obj, _evt) -> None:
             if self._viewer is not None:
                 self._viewer.camera.zoom(1.0)
-
         def on_wheel_backward(_obj, _evt) -> None:
             if self._viewer is not None:
                 self._viewer.camera.zoom(-1.0)
-
         _obs("LeftButtonPressEvent", on_left_press)
         _obs("MiddleButtonPressEvent", on_middle_press)
         _obs("RightButtonPressEvent", on_right_press)
@@ -263,9 +253,7 @@ class ViewerCanvas(QFrame):
         _obs("MouseMoveEvent", on_move)
         _obs("MouseWheelForwardEvent", on_wheel_forward)
         _obs("MouseWheelBackwardEvent", on_wheel_backward)
-
     def _tick_camera(self) -> None:
-        """Advance camera transitions only — never idle-render."""
         if self._viewer is None or self._viewer.skeleton is None:
             return
         now = time.perf_counter()
@@ -278,10 +266,106 @@ class ViewerCanvas(QFrame):
                 self._viewer.update_frame()
             except Exception:
                 logger.debug("Camera tick failed", exc_info=True)
-
+    def _draw_avatar_body(self, pose: Pose) -> None:
+        """Same frame tick as stick figure — mesh + head/toe markers."""
+        if self._renderer is None or not self._dt_bridge.ready:
+            return
+        mesh_pts, landmarks = self._dt_bridge.frame_package(pose.frame_index)
+        if mesh_pts is not None:
+            self._renderer.draw_avatar_body(mesh_pts)
+        head = landmarks.get("head")
+        if head is not None:
+            self._renderer.draw_sphere(
+                head,
+                22.0 * max(self._dt_bridge._stage_scale * 0.02, 1.0),
+                (1.0, 0.25, 0.25),
+                name="avatar:head",
+            )
+        for key, color in (
+            ("foot_l", (0.3, 0.55, 1.0)),
+            ("foot_r", (0.3, 0.55, 1.0)),
+            ("ball_l", (0.15, 0.35, 0.9)),
+            ("ball_r", (0.15, 0.35, 0.9)),
+        ):
+            pt = landmarks.get(key)
+            if pt is not None:
+                self._renderer.draw_sphere(
+                    pt,
+                    14.0 * max(self._dt_bridge._stage_scale * 0.02, 1.0),
+                    color,
+                    name=f"avatar:{key}",
+                )
+    def _attach_avatar(self) -> None:
+        if self._viewer is None or self._renderer is None or not self._dt_bridge.ready:
+            return
+        faces = self._dt_bridge.pv_faces()
+        if faces is not None:
+            self._renderer.set_avatar_topology(faces, self._dt_bridge.vertex_count)
+        self._viewer.show_body = True
+        self._viewer.show_bones = False
+        self._viewer.show_joints = False
+        self._viewer.update_frame(self._frame)
+    def _detach_avatar(self) -> None:
+        if self._viewer is not None:
+            self._viewer.show_body = False
+            self._viewer.show_bones = True
+            self._viewer.show_joints = True
+        if self._renderer is not None:
+            self._renderer.clear_avatar()
+        if self._viewer is not None and self._viewer.skeleton is not None:
+            self._viewer.update_frame(self._frame)
+    def _cancel_avatar_prep(self) -> None:
+        worker = self._prep_worker
+        self._prep_worker = None
+        if worker is not None and worker.isRunning():
+            worker.quit()
+            worker.wait(1500)
+    def _begin_avatar_prep(self, skeleton: Skeleton) -> None:
+        self._cancel_avatar_prep()
+        self._prep_token += 1
+        token = self._prep_token
+        self._hint.setText(
+            f"{skeleton.subject_id}/{skeleton.session_name} | "
+            f"{skeleton.frame_count}f | Avatar loading…"
+        )
+        worker = _AvatarPrepWorker(skeleton, self)
+        self._prep_worker = worker
+        worker.finished.connect(
+            lambda bridge, err: self._on_avatar_prep_done(token, bridge, err)
+        )
+        worker.start()
+    def _on_avatar_prep_done(self, token: int, bridge: object, error: str) -> None:
+        if token != self._prep_token:
+            return
+        self._prep_worker = None
+        sk = self._skeleton
+        if sk is not None:
+            self._hint.setText(
+                f"{sk.subject_id}/{sk.session_name} | {sk.frame_count}f"
+            )
+        if not self._digital_twin_enabled:
+            return
+        if bridge is None or not getattr(bridge, "ready", False):
+            self._error.show_error("Avatar unavailable", error or "Load failed")
+            self._digital_twin_enabled = False
+            if hasattr(self.toolbar, "_avatar_btn"):
+                self.toolbar._avatar_btn.blockSignals(True)
+                self.toolbar._avatar_btn.setChecked(False)
+                self.toolbar._avatar_btn.blockSignals(False)
+            return
+        self._dt_bridge = bridge  # type: ignore[assignment]
+        if sk is not None:
+            mode = "bind pose" if self._dt_bridge.use_bind_pose else "retarget"
+            self._hint.setText(
+                f"{sk.subject_id}/{sk.session_name} | {sk.frame_count}f | "
+                f"Avatar {self._dt_bridge.vertex_count}v ({mode})"
+            )
+        self._error.hide()
+        self._attach_avatar()
+        self.reset_camera()
     def set_skeleton(self, skeleton: Skeleton | None, frame: int = 0) -> None:
-        """Load a skeleton into the embedded viewport."""
-        if (
+        """Load a skeleton — same playback path for stick and avatar."""
+        same = (
             skeleton is not None
             and self._skeleton is not None
             and skeleton.subject_id == self._skeleton.subject_id
@@ -289,24 +373,27 @@ class ViewerCanvas(QFrame):
             and skeleton.frame_count == self._skeleton.frame_count
             and self._viewer is not None
             and self._viewer.skeleton is not None
-        ):
+        )
+        if same:
             self.set_frame(frame)
             return
-
+        self._cancel_avatar_prep()
         self._skeleton = skeleton
         self._frame = frame
         if skeleton is None:
+            self._detach_avatar()
+            self._dt_bridge.clear()
             self._hint.setText("Select a session")
             self._pending_skeleton = None
             self._error.hide()
             return
-
         if not self.isVisible() or not self._ensure_viewport() or self._viewer is None:
             self._pending_skeleton = skeleton
             self._hint.setText(f"{skeleton.subject_id}/{skeleton.session_name}")
             return
-
         self._pending_skeleton = None
+        self._dt_bridge.clear()
+        self._detach_avatar()
         self._hint.setText(
             f"{skeleton.subject_id}/{skeleton.session_name} | {skeleton.frame_count}f"
         )
@@ -316,13 +403,14 @@ class ViewerCanvas(QFrame):
             self.set_frame(frame)
             self.reset_camera()
             self._error.hide()
+            if self._digital_twin_enabled:
+                self._begin_avatar_prep(skeleton)
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to show skeleton in embedded viewport")
             self._error.show_error("Failed to load skeleton", str(exc))
             self._hint.setText("Skeleton could not be rendered.")
-
     def set_frame(self, frame: int) -> None:
-        """Seek the embedded viewer to ``frame``."""
+        """Seek — stick and avatar share this single code path."""
         self._frame = frame
         if self._viewer is None or self._viewer.skeleton is None:
             return
@@ -330,9 +418,27 @@ class ViewerCanvas(QFrame):
             self._viewer.seek(int(frame))
         except Exception:
             logger.debug("Embedded seek failed", exc_info=True)
-
+    def set_digital_twin_enabled(self, enabled: bool) -> None:
+        if self._digital_twin_enabled == enabled:
+            return
+        self._digital_twin_enabled = enabled
+        if not enabled:
+            self._cancel_avatar_prep()
+            self._detach_avatar()
+            return
+        if self._skeleton is None:
+            self._error.show_error("Avatar unavailable", "Load a session first.")
+            self._digital_twin_enabled = False
+            if hasattr(self.toolbar, "_avatar_btn"):
+                self.toolbar._avatar_btn.blockSignals(True)
+                self.toolbar._avatar_btn.setChecked(False)
+                self.toolbar._avatar_btn.blockSignals(False)
+            return
+        if self._dt_bridge.ready:
+            self._attach_avatar()
+        else:
+            self._begin_avatar_prep(self._skeleton)
     def reset_camera(self) -> None:
-        """Front clinical view: center subject, fit full body, smooth transition."""
         if self._viewer is None:
             return
         try:
@@ -340,9 +446,7 @@ class ViewerCanvas(QFrame):
             self._viewer.update_frame()
         except Exception:
             logger.debug("Camera reset failed", exc_info=True)
-
     def fit_camera(self) -> None:
-        """Fit the subject in the current view direction."""
         if self._viewer is None:
             return
         try:
@@ -350,9 +454,7 @@ class ViewerCanvas(QFrame):
             self._viewer.update_frame()
         except Exception:
             logger.debug("Camera fit failed", exc_info=True)
-
     def set_camera_preset(self, preset: str) -> None:
-        """Anatomical presets: Front / Back / Left / Right - one smooth framed move."""
         if self._viewer is None:
             return
         cam = self._viewer.camera
@@ -371,28 +473,24 @@ class ViewerCanvas(QFrame):
             self._viewer.update_frame()
         except Exception:
             logger.debug("Camera preset failed", exc_info=True)
-
     def set_grid_visible(self, visible: bool) -> None:
         if self._viewer is None:
             return
         if self._viewer.scene.show_grid != visible:
             self._viewer.scene.show_grid = visible
             self._viewer.update_frame()
-
     def set_axes_visible(self, visible: bool) -> None:
         if self._viewer is None:
             return
         if self._viewer.scene.show_axes != visible:
             self._viewer.scene.show_axes = visible
             self._viewer.update_frame()
-
     def set_ground_visible(self, visible: bool) -> None:
         if self._viewer is None:
             return
         if self._viewer.scene.show_ground != visible:
             self._viewer.scene.show_ground = visible
             self._viewer.update_frame()
-
     def set_lighting_enabled(self, enabled: bool) -> None:
         if self._viewer is None or self._renderer is None:
             return
@@ -401,11 +499,8 @@ class ViewerCanvas(QFrame):
             self._viewer.update_frame()
         except Exception:
             logger.debug("Lighting toggle failed", exc_info=True)
-
     def show_skeleton(self, skeleton: Skeleton) -> None:
-        """RendererService-compatible entry point."""
         self.set_skeleton(skeleton, frame=0)
-
     def _on_fullscreen(self) -> None:
         window = self.window()
         if window is None:

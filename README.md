@@ -17,7 +17,7 @@
 1. **Reproducible reconstruction** — marker → joint → bone graph driven by YAML, not ad-hoc scripts  
 2. **Data fidelity** — joint positions and bone lengths derived only from the dataset  
 3. **Interactive analysis** — subject/session browser, timeline playback, studio viewport  
-4. **Interactive analysis** — subject/session browser, timeline playback, studio viewport  
+4. **Digital twin runtime** — avatar skeleton, skinning (M4), animation (M5), motion retargeting (M6), unified platform runtime (M7)  
 
 ---
 

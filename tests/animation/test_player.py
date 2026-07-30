@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_player_playback_and_seek as test_player

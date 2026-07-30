@@ -1,18 +1,13 @@
-﻿"""Project-level application state for AXYX."""
-
+"""Project-level application state for AXYX."""
 from __future__ import annotations
-
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-
 from motion_engine.models import MotionDatabase
-
 
 @dataclass
 class ProjectModel:
     """In-memory project / workspace state.
-
     Attributes:
         database: Loaded :class:`MotionDatabase`, if any.
         dataset_path: Source MATLAB path.
@@ -20,24 +15,20 @@ class ProjectModel:
         status_message: Last human-readable status line.
         busy: True while a long operation runs.
     """
-
     database: MotionDatabase | None = None
     dataset_path: Path | None = None
     subject_ids: list[str] = field(default_factory=list)
     status_message: str = "Ready"
     busy: bool = False
     error_message: str | None = None
-
     @property
     def is_loaded(self) -> bool:
         """Return True when a database is available."""
         return self.database is not None and bool(self.subject_ids)
-
     @property
     def subject_count(self) -> int:
         """Number of subjects in the project."""
         return len(self.subject_ids)
-
     def clear(self) -> None:
         """Reset project state."""
         self.database = None
@@ -46,7 +37,6 @@ class ProjectModel:
         self.status_message = "Ready"
         self.busy = False
         self.error_message = None
-
     def to_dict(self) -> dict[str, Any]:
         """Serialize lightweight project metadata."""
         return {

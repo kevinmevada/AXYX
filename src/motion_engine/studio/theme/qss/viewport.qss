@@ -1,0 +1,8 @@
+QWidget#LoadingOverlay {{
+    background-color: {overlay_scrim};
+}}
+QWidget#ViewportStage {{
+    background-color: {viewport_void};
+    border: 1px solid {glass_edge};
+    border-radius: {radius_xl}px;
+}}

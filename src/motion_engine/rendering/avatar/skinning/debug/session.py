@@ -37,6 +37,11 @@ class SkinningDebugSession:
     rot_x: float = 0.0
     rot_y: float = 0.0
     rot_z: float = 0.0
+    # M5 animation (optional)
+    anim_clips: dict[str, Any] = field(default_factory=dict)
+    anim_player: Any | None = None
+    anim_clip_name: str = ""
+    anim_enabled: bool = False
 
     @classmethod
     def from_loaded(
@@ -110,7 +115,7 @@ class SkinningDebugSession:
     @property
     def diagnostics(self) -> dict[str, Any]:
         st = self.runtime.last_statistics
-        return {
+        d = {
             "vertices": self.mesh.vertex_count,
             "triangles": self.mesh.triangle_count,
             "bones": self.skeleton.bone_count,
@@ -120,10 +125,90 @@ class SkinningDebugSession:
             "backend": "CPU",
             "selected_bone": self.selected_bone,
         }
+        if self.anim_player is not None and self.anim_enabled:
+            d["anim_time"] = self.anim_player.time
+            d["anim_frame"] = self.anim_player.frame
+            d["anim_clip"] = self.anim_clip_name
+            d["anim_state"] = self.anim_player.state.name
+        return d
+
+    def ensure_animation_library(self) -> list[str]:
+        """Build procedural Idle/Walk/Run/Jump clips for the debug player.
+
+        FBX anim bake is intentionally not done at startup — ``ufbx`` evaluate
+        can hang or AV on some assets and would block the window from opening.
+        """
+        if self.anim_clips:
+            return list(self.anim_clips.keys())
+        from motion_engine.rendering.avatar.animation import AnimationFactory, AnimationPlayer
+
+        factory = AnimationFactory()
+        self.anim_clips = factory.locomotion_set(self.bind)
+        self.anim_player = AnimationPlayer(bind=self.bind)
+        names = list(self.anim_clips.keys())
+        if names:
+            self.load_anim_clip(names[0])
+        return names
+
+    def load_anim_clip(self, name: str) -> DeformedMesh:
+        from motion_engine.rendering.avatar.animation import LoopMode
+
+        if name not in self.anim_clips:
+            raise KeyError(name)
+        assert self.anim_player is not None
+        self.anim_clip_name = name
+        self.anim_player.load(self.anim_clips[name])
+        self.anim_player.set_loop(LoopMode.LOOP)
+        self.anim_enabled = True
+        self.pose = self.anim_player.seek(0.0)
+        return self.deform()
+
+    def anim_play(self) -> None:
+        self.ensure_animation_library()
+        assert self.anim_player is not None
+        self.anim_enabled = True
+        self.anim_player.play()
+
+    def anim_pause(self) -> None:
+        if self.anim_player:
+            self.anim_player.pause()
+
+    def anim_stop(self) -> None:
+        if self.anim_player:
+            self.anim_player.stop()
+            self.pose = self.anim_player.evaluate()
+            self.deform()
+
+    def anim_seek(self, t: float) -> DeformedMesh:
+        self.ensure_animation_library()
+        assert self.anim_player is not None
+        self.anim_enabled = True
+        self.pose = self.anim_player.seek(t)
+        return self.deform()
+
+    def anim_set_speed(self, speed: float) -> None:
+        if self.anim_player:
+            self.anim_player.set_speed(speed)
+
+    def anim_set_loop(self, enabled: bool) -> None:
+        from motion_engine.rendering.avatar.animation import LoopMode
+
+        if self.anim_player:
+            self.anim_player.set_loop(LoopMode.LOOP if enabled else LoopMode.ONCE)
+
+    def anim_tick(self, dt: float) -> DeformedMesh:
+        self.ensure_animation_library()
+        assert self.anim_player is not None
+        self.anim_enabled = True
+        self.pose = self.anim_player.tick(dt)
+        return self.deform()
 
     def reset(self) -> DeformedMesh:
         self.pose = reset_to_bind(self.bind)
         self.rot_x = self.rot_y = self.rot_z = 0.0
+        self.anim_enabled = False
+        if self.anim_player is not None:
+            self.anim_player.stop()
         return self.deform()
 
     def set_bone_euler(self, bone: str, *, x: float, y: float, z: float) -> DeformedMesh:

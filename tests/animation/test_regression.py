@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_regression_bind_at_t0_near_identity_delta as test_regression

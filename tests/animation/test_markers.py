@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_events_and_markers as test_markers

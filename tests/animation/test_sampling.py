@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_sampling_produces_pose_for_m4 as test_sampling

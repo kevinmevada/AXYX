@@ -1,5 +1,4 @@
-﻿"""Programmatic icon factory for AXYX.
-
+"""Programmatic icon factory for AXYX.
 Icon system
 -----------
 * Size grid: 16 / 20 / 24 / 32 (``StudioIcons`` / ``ICON_*`` constants).
@@ -8,30 +7,23 @@ Icon system
 * Prefer filled geometric glyphs for transport (play/pause) so hit targets
   read clearly at 20-24px; keep stroke icons for chrome actions.
 """
-
 from __future__ import annotations
-
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
-
 from motion_engine.studio.theme import DEFAULT_THEME
-
 ICON_XS = DEFAULT_THEME.icons.xs
 ICON_SM = DEFAULT_THEME.icons.sm
 ICON_MD = DEFAULT_THEME.icons.md
 ICON_LG = DEFAULT_THEME.icons.lg
 
-
 def _ink(active: bool = False) -> QColor:
     c = DEFAULT_THEME.colors
     return QColor(c.accent if active else c.text_secondary)
-
 
 def _base_pixmap(size: int = ICON_MD) -> QPixmap:
     pix = QPixmap(size, size)
     pix.fill(Qt.GlobalColor.transparent)
     return pix
-
 
 def _stroke_pen(active: bool = False, size: int = ICON_MD) -> QPen:
     pen = QPen(_ink(active))
@@ -39,7 +31,6 @@ def _stroke_pen(active: bool = False, size: int = ICON_MD) -> QPen:
     pen.setCapStyle(Qt.PenCapStyle.RoundCap)
     pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
     return pen
-
 
 def icon_play(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     """Return a play triangle icon."""
@@ -57,7 +48,6 @@ def icon_play(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     painter.end()
     return QIcon(pix)
 
-
 def icon_pause(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     """Return a pause icon."""
     pix = _base_pixmap(size)
@@ -73,7 +63,6 @@ def icon_pause(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     painter.end()
     return QIcon(pix)
 
-
 def icon_stop(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     """Return a stop icon."""
     pix = _base_pixmap(size)
@@ -87,7 +76,6 @@ def icon_stop(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     )
     painter.end()
     return QIcon(pix)
-
 
 def icon_prev(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     """Return previous-frame icon."""
@@ -107,7 +95,6 @@ def icon_prev(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     painter.end()
     return QIcon(pix)
 
-
 def icon_next(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     """Return next-frame icon."""
     pix = _base_pixmap(size)
@@ -125,7 +112,6 @@ def icon_next(size: int = ICON_MD, *, active: bool = False) -> QIcon:
     painter.drawRoundedRect(QRectF(size * 0.64, size * 0.28, size * 0.12, size * 0.44), 2, 2)
     painter.end()
     return QIcon(pix)
-
 
 def icon_display(size: int = ICON_SM, *, active: bool = False) -> QIcon:
     """Stroke icon for the Display menu button."""
@@ -146,7 +132,6 @@ def icon_display(size: int = ICON_SM, *, active: bool = False) -> QIcon:
     )
     painter.end()
     return QIcon(pix)
-
 
 def icon_app(size: int = 64) -> QIcon:
     """Premium app mark - soft white card + accent gait path."""
@@ -176,7 +161,6 @@ def icon_app(size: int = 64) -> QIcon:
         painter.drawEllipse(QPointF(cx, cy), size * 0.05, size * 0.05)
     painter.end()
     return QIcon(pix)
-
 
 def splash_pixmap(width: int = 560, height: int = 320) -> QPixmap:
     """Create a splash screen pixmap."""

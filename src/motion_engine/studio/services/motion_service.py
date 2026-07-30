@@ -44,6 +44,7 @@ class MotionService:
         self._loader = loader or MotionDatabaseLoader()
         self._database: MotionDatabase | None = None
         self._dataset_path: Path | None = None
+        self._dataset_mtime: float | None = None
         self._skeleton: Skeleton | None = None
         self._clip: AnimationClip | None = None
         self._active_subject_id: str | None = None
@@ -76,6 +77,17 @@ class MotionService:
             path: Optional MATLAB dataset path. Defaults to the engine default.
         """
         logger.info("Loading MotionDatabase path=%s", path)
+        resolved: Path | None = Path(path).expanduser().resolve() if path else None
+        mtime: float | None = None
+        if resolved is not None and resolved.is_file():
+            mtime = resolved.stat().st_mtime
+            if (
+                self._database is not None
+                and self._dataset_path == resolved
+                and self._dataset_mtime == mtime
+            ):
+                logger.info("Using cached MotionDatabase path=%s", resolved)
+                return self._database
         try:
             if path is None:
                 database = self._loader.load()
@@ -85,8 +97,12 @@ class MotionService:
             raise MotionServiceError(f"Failed to load dataset: {exc}") from exc
         self._database = database
         self._dataset_path = Path(database.dataset_path) if database.dataset_path else (
-            Path(path).resolve() if path else None
+            resolved
         )
+        if self._dataset_path is not None and self._dataset_path.is_file():
+            self._dataset_mtime = self._dataset_path.stat().st_mtime
+        else:
+            self._dataset_mtime = mtime
         self._skeleton = None
         self._clip = None
         self._active_subject_id = None

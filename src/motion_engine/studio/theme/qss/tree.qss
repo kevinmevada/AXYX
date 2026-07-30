@@ -1,0 +1,14 @@
+/* Tree-specific refinements — list/table rules live in tables.qss */
+QTreeWidget::branch {{
+    background: transparent;
+}}
+QTreeWidget::branch:has-children:!has-siblings:closed,
+QTreeWidget::branch:closed:has-children:has-siblings {{
+    border-image: none;
+    image: none;
+}}
+QTreeWidget::branch:open:has-children:!has-siblings,
+QTreeWidget::branch:open:has-children:has-siblings {{
+    border-image: none;
+    image: none;
+}}

@@ -1,0 +1,1 @@
+from tests.animation.test_m5_suite import test_track_sample_lerp as test_interpolation

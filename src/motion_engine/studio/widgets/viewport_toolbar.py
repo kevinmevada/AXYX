@@ -20,6 +20,7 @@ class ViewportToolbar(QWidget):
     groundToggled = Signal(bool)
     lightingToggled = Signal(bool)
     fullscreenRequested = Signal()
+    digitalTwinToggled = Signal(bool)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -54,6 +55,18 @@ class ViewportToolbar(QWidget):
             segment.addWidget(btn)
             self._camera_group.append(btn)
         layout.addLayout(segment)
+
+        layout.addWidget(_divider())
+
+        self._avatar_btn = QPushButton("Avatar")
+        self._avatar_btn.setObjectName("SegmentButton")
+        self._avatar_btn.setCheckable(True)
+        self._avatar_btn.setFixedHeight(28)
+        self._avatar_btn.setToolTip(
+            "Show skinned Army Girl mesh (digital twin) instead of stick figure"
+        )
+        self._avatar_btn.toggled.connect(self.digitalTwinToggled.emit)
+        layout.addWidget(self._avatar_btn)
 
         layout.addWidget(_divider())
 

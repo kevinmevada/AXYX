@@ -1,0 +1,73 @@
+QWidget#CommandBar {{
+    background: {glass_strong};
+    border: none;
+    border-bottom: 1px solid {glass_edge};
+}}
+QWidget#TimelineDock {{
+    background: {glass_strong};
+    border: 1px solid {glass_edge};
+    border-top: 1px solid {glass_border};
+    border-radius: {radius_md}px;
+}}
+QWidget#ViewportToolbar {{
+    background: {glass_strong};
+    border: 1px solid {glass_edge};
+    border-top: 1px solid {glass_border};
+    border-radius: {radius_lg}px;
+    padding: 4px 8px;
+}}
+QFrame#ToolbarDivider {{
+    background-color: {border_subtle};
+    max-width: 1px;
+    min-width: 1px;
+    margin: 6px 4px;
+    border: none;
+}}
+QFrame#Sidebar,
+QFrame#InspectorPanel {{
+    background: {glass};
+    border: 1px solid {glass_edge};
+    border-top: 1px solid {glass_border};
+    border-radius: {radius_xl}px;
+}}
+QFrame#CenterPanel {{
+    background-color: transparent;
+    border: none;
+}}
+QFrame#Card,
+QFrame#InspectorCard {{
+    background: {glass_strong};
+    border: 1px solid {glass_edge};
+    border-top: 1px solid {glass_border};
+    border-radius: {radius_lg}px;
+}}
+QFrame#Divider {{
+    background-color: {border_subtle};
+    max-height: 1px;
+    min-height: 1px;
+    border: none;
+}}
+QFrame#ToolbarDivider {{
+    background-color: {border};
+    max-width: 1px;
+    min-width: 1px;
+    border: none;
+    margin: {space_xs}px {space_sm}px;
+}}
+QFrame#ErrorBanner {{
+    background-color: {danger_muted};
+    border: 1px solid {danger};
+    border-radius: {radius_md}px;
+}}
+QFrame#EmptyState {{
+    background: {surface_sunken};
+    border: none;
+    border-radius: {radius_lg}px;
+    min-height: 100px;
+}}
+QToolBar {{
+    background: {glass_subtle};
+    border: none;
+    spacing: {space_sm}px;
+    padding: {space_xs}px {space_sm}px;
+}}

@@ -1,0 +1,27 @@
+# Motion Studio — desktop tech stack (venv311 / Python 3.11+)
+# Install:  .\venv311\Scripts\python.exe -m pip install -r requirements-studio.txt
+# Torch CUDA index (Windows): add --extra-index-url https://download.pytorch.org/whl/cu128
+
+# Desktop UI
+PySide6>=6.6
+pyqtgraph>=0.13
+
+# 3D viewport
+pyvista>=0.43
+pyvistaqt>=0.11
+vtk>=9.3
+
+# Core science
+numpy>=1.26
+scipy>=1.11
+pandas>=2.0
+h5py>=3.10
+scikit-learn>=1.4
+opencv-python>=4.8
+
+# ML (CUDA cu128 wheel when GPU available; CPU fallback via pytorch.org index)
+torch>=2.2
+
+# Supporting
+Pillow>=10.0
+fonttools>=4.40

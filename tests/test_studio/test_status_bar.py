@@ -26,7 +26,8 @@ def test_status_bar_updates_labels() -> None:
             playback_state="playing",
             memory_mb=128.0,
             renderer="pyvista",
-            cpu_percent=12.0,
+            gpu="RTX",
+            render_fps=60.0,
         )
     )
     assert "S2" in bar._subject.text()
@@ -34,4 +35,4 @@ def test_status_bar_updates_labels() -> None:
     assert "306" in bar._frames.text()
     assert "playing" in bar._state.text().lower()
     assert "pyvista" in bar._renderer.text().lower()
-    assert "12" in bar._cpu.text()
+    assert "RTX" in bar._gpu.text()

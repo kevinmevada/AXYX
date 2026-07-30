@@ -1,0 +1,19 @@
+"""Animation runtime constants."""
+
+from __future__ import annotations
+
+RUNTIME_VERSION = "1.0.0"
+DEFAULT_FPS = 30.0
+DEFAULT_MAX_INFLUENCES = 4
+SLERP_DOT_THRESHOLD = 0.9995
+CUBIC_TENSION = 0.0
+CACHE_DEFAULT_CAPACITY = 128
+
+__all__ = [
+    "RUNTIME_VERSION",
+    "DEFAULT_FPS",
+    "DEFAULT_MAX_INFLUENCES",
+    "SLERP_DOT_THRESHOLD",
+    "CUBIC_TENSION",
+    "CACHE_DEFAULT_CAPACITY",
+]

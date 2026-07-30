@@ -1,0 +1,3 @@
+QDialogButtonBox QPushButton {{
+    min-width: 88px;
+}}

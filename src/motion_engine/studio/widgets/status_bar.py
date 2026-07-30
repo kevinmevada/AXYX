@@ -1,17 +1,12 @@
-﻿"""Professional status bar for AXYX."""
-
+"""Professional status bar for AXYX."""
 from __future__ import annotations
-
 import os
 from dataclasses import dataclass
-
 from PySide6.QtWidgets import QLabel, QStatusBar
-
 
 @dataclass(slots=True)
 class StatusSnapshot:
     """Values displayed in the status bar."""
-
     dataset: str = "-"
     subject: str = "-"
     session: str = "-"
@@ -25,10 +20,8 @@ class StatusSnapshot:
     renderer: str = "PyVista"
     gpu: str = "-"
 
-
 class StudioStatusBar(QStatusBar):
     """Renderer | FPS | GPU | frames | memory | subject | session | state."""
-
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._renderer = QLabel("Renderer: PyVista")
@@ -53,7 +46,6 @@ class StudioStatusBar(QStatusBar):
         self._state.setObjectName("StatePill")
         self._state.setProperty("state", "stopped")
         self.addPermanentWidget(self._state)
-
     def update_snapshot(self, snap: StatusSnapshot) -> None:
         self._renderer.setText(f"Renderer: {snap.renderer}")
         fps = snap.render_fps if snap.render_fps is not None else snap.fps
@@ -69,11 +61,9 @@ class StudioStatusBar(QStatusBar):
         self._state.style().unpolish(self._state)
         self._state.style().polish(self._state)
 
-
 def _process_memory_mb() -> float | None:
     try:
         import psutil
-
         return psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
     except Exception:
         return None

@@ -1,0 +1,120 @@
+* {{
+    font-family: {font_family};
+    font-size: {size_md}px;
+    color: {text_primary};
+    outline: none;
+}}
+QMainWindow, QDialog {{
+    background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1,
+        stop:0 {gradient_top}, stop:0.55 {gradient_mid}, stop:1 {gradient_bottom});
+}}
+QWidget {{
+    background-color: transparent;
+    color: {text_primary};
+}}
+QWidget#Workspace,
+QWidget#WelcomeRoot {{
+    background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1,
+        stop:0 {gradient_top}, stop:0.55 {gradient_mid}, stop:1 {gradient_bottom});
+}}
+QGroupBox {{
+    background: {glass_strong};
+    border: 1px solid {glass_edge};
+    border-radius: {radius_lg}px;
+    margin-top: {space_md}px;
+    padding: {space_md}px;
+    font-weight: 600;
+    color: {text_primary};
+}}
+QGroupBox::title {{
+    subcontrol-origin: margin;
+    left: {space_sm}px;
+    padding: 0 {space_xs}px;
+    color: {text_primary};
+    font-size: {size_xs}px;
+    letter-spacing: {tracking_caps};
+    text-transform: uppercase;
+}}
+QLabel#BrandTitle {{
+    font-size: {size_xl}px;
+    font-weight: 700;
+    letter-spacing: {tracking_tight};
+    color: {text_primary};
+}}
+QLabel#BrandSubtitle,
+QLabel#MutedLabel {{
+    color: {text_primary};
+    font-size: {size_sm}px;
+}}
+QLabel#SectionLabel {{
+    color: {text_primary};
+    font-size: {size_lg}px;
+    font-weight: 600;
+    letter-spacing: {tracking_wide};
+    padding-top: {space_xs}px;
+}}
+QLabel#HeroTitle {{
+    font-size: {size_display}px;
+    font-weight: 700;
+    letter-spacing: {tracking_tight};
+    color: {text_primary};
+}}
+QLabel#FeatureHeading {{
+    font-weight: 600;
+    font-size: {size_sm}px;
+    color: {text_primary};
+}}
+QLabel#FeatureBody {{
+    font-size: {size_xs}px;
+    color: {text_primary};
+}}
+QLabel#MetricValue {{
+    font-family: {font_family_mono};
+    font-size: {size_xs}px;
+    font-weight: 600;
+    color: {text_primary};
+}}
+QLabel#EyebrowLabel {{
+    color: {accent};
+    font-size: {size_xs}px;
+    font-weight: 700;
+    letter-spacing: {tracking_caps};
+    text-transform: uppercase;
+}}
+QLabel#ErrorBannerText {{
+    color: {danger};
+    font-size: {size_sm}px;
+    font-weight: 600;
+}}
+QLabel#EmptyTitle {{
+    font-size: {size_lg}px;
+    font-weight: 650;
+    color: {text_primary};
+}}
+QLabel#EmptySubtitle {{
+    font-size: {size_sm}px;
+    color: {text_primary};
+}}
+QLabel#TimecodeLabel {{
+    font-family: {font_family_mono};
+    font-size: {size_sm}px;
+    color: {accent};
+    letter-spacing: 0.4px;
+}}
+QLabel#FrameLabel {{
+    font-family: {font_family_mono};
+    font-size: {size_xs}px;
+    color: {text_secondary};
+}}
+QSplitter::handle {{
+    background: transparent;
+    width: {space_sm}px;
+}}
+QToolTip {{
+    background: {text_primary};
+    color: {surface_raised};
+    border: none;
+    border-radius: {radius_sm}px;
+    padding: 6px 10px;
+    font-size: {size_xs}px;
+}}

@@ -1,0 +1,36 @@
+QStatusBar {{
+    background: {glass_strong};
+    border-top: 1px solid {glass_edge};
+    color: {text_primary};
+    font-size: {size_xs}px;
+    padding: 2px {space_sm}px;
+}}
+QStatusBar::item {{ border: none; }}
+QLabel#StatusStat {{
+    color: {text_primary};
+    font-size: {size_xs}px;
+    padding: 0 {space_sm}px;
+    font-family: {font_family_mono};
+}}
+QLabel#StatePill {{
+    font-size: {size_xs}px;
+    font-weight: 700;
+    letter-spacing: {tracking_wide};
+    text-transform: uppercase;
+    padding: 3px {space_sm}px;
+    border-radius: {radius_pill}px;
+    background: {surface_sunken};
+    color: {text_secondary};
+}}
+QLabel#StatePill[state="playing"] {{
+    background: {success_muted};
+    color: {success};
+}}
+QLabel#StatePill[state="paused"] {{
+    background: {warning_muted};
+    color: {warning};
+}}
+QLabel#StatePill[state="stopped"] {{
+    background: {surface_sunken};
+    color: {text_muted};
+}}
