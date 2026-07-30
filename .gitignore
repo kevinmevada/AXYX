@@ -25,6 +25,8 @@ assets/
 # KILI raw Unreal exports (large); runtime cache may be committed for clone-without-FBX
 KILI/*.FBX
 KILI/*.fbx
+# Studio digital-twin mesh (small Mixamo/Unreal Army Girl pack)
+!KILI/uploads_files_5923911_army_girl.fbx
 KILI/*.TGA
 KILI/*.tga
 KILI/cache/*.npz
