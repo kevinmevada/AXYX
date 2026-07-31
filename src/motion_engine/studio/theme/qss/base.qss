@@ -5,59 +5,95 @@
     outline: none;
 }}
 QMainWindow, QDialog {{
-    background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1,
-        stop:0 {gradient_top}, stop:0.55 {gradient_mid}, stop:1 {gradient_bottom});
+    background-color: {background};
+    color: {text_primary};
 }}
+/* Do NOT make every QWidget transparent — Fusion then paints OS dark Window
+   into dock holes and the Explorer rail goes solid black while Workspace
+   (which sets an explicit fill) stays Museum White. */
 QWidget {{
-    background-color: transparent;
     color: {text_primary};
 }}
 QWidget#Workspace,
-QWidget#WelcomeRoot {{
-    background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1,
-        stop:0 {gradient_top}, stop:0.55 {gradient_mid}, stop:1 {gradient_bottom});
+QWidget#WelcomeRoot,
+QWidget#StageRoot,
+QWidget#CommandBar,
+QWidget#TimelineDock,
+QWidget#CentralRoot {{
+    background-color: {background};
+    border: none;
+}}
+QMainWindow {{
+    background-color: {background};
+    border: none;
 }}
 QGroupBox {{
-    background: {glass_strong};
-    border: 1px solid {glass_edge};
-    border-radius: {radius_lg}px;
-    margin-top: {space_md}px;
-    padding: {space_md}px;
+    background: transparent;
+    border: none;
+    border-top: 1px solid {border_subtle};
+    border-radius: 0px;
+    margin-top: {space_lg}px;
+    padding: {space_md}px 0;
     font-weight: 600;
     color: {text_primary};
 }}
 QGroupBox::title {{
     subcontrol-origin: margin;
-    left: {space_sm}px;
-    padding: 0 {space_xs}px;
-    color: {text_primary};
+    left: 0;
+    padding: 0;
+    color: {text_disabled};
     font-size: {size_xs}px;
     letter-spacing: {tracking_caps};
     text-transform: uppercase;
 }}
 QLabel#BrandTitle {{
-    font-size: {size_xl}px;
-    font-weight: 700;
-    letter-spacing: {tracking_tight};
-    color: {text_primary};
+    font-family: {font_family};
+    font-size: 14px;
+    font-weight: 600;
+    background: transparent;
 }}
-QLabel#BrandSubtitle,
+QLabel#BrandSubtitle {{
+    font-family: {font_family};
+    font-size: {size_xs}px;
+    font-weight: 600;
+    letter-spacing: {tracking_caps};
+    text-transform: uppercase;
+    color: {text_muted};
+}}
 QLabel#MutedLabel {{
     color: {text_primary};
-    font-size: {size_sm}px;
+    font-size: {size_lg}px;
+    font-weight: 400;
 }}
 QLabel#SectionLabel {{
-    color: {text_primary};
-    font-size: {size_lg}px;
+    color: {text_secondary};
+    font-size: {size_xs}px;
     font-weight: 600;
-    letter-spacing: {tracking_wide};
-    padding-top: {space_xs}px;
+    letter-spacing: {tracking_caps};
+    text-transform: uppercase;
+    padding-top: 0;
+}}
+QLabel#WelcomeBrand {{
+    background: transparent;
+    border: none;
+}}
+QLabel#WelcomeTagline {{
+    background: transparent;
+    color: {text_primary};
+}}
+QLabel#WelcomeSupport {{
+    background: transparent;
+    color: {text_secondary};
+}}
+QLabel#WelcomeFoot {{
+    background: transparent;
+    color: {text_muted};
 }}
 QLabel#HeroTitle {{
+    font-family: {font_family_display};
     font-size: {size_display}px;
-    font-weight: 700;
-    letter-spacing: {tracking_tight};
-    color: {text_primary};
+    font-weight: 600;
+    background: transparent;
 }}
 QLabel#FeatureHeading {{
     font-weight: 600;
@@ -65,19 +101,24 @@ QLabel#FeatureHeading {{
     color: {text_primary};
 }}
 QLabel#FeatureBody {{
-    font-size: {size_xs}px;
-    color: {text_primary};
+    font-size: {size_lg}px;
+    font-weight: 400;
+    color: {text_secondary};
 }}
 QLabel#MetricValue {{
     font-family: {font_family_mono};
-    font-size: {size_xs}px;
+    font-size: {size_xl}px;
     font-weight: 600;
     color: {text_primary};
 }}
-QLabel#EyebrowLabel {{
-    color: {accent};
+QLabel#MetricUnit {{
     font-size: {size_xs}px;
-    font-weight: 700;
+    color: {text_muted};
+}}
+QLabel#EyebrowLabel {{
+    color: {text_muted};
+    font-size: {size_xs}px;
+    font-weight: 600;
     letter-spacing: {tracking_caps};
     text-transform: uppercase;
 }}
@@ -87,34 +128,40 @@ QLabel#ErrorBannerText {{
     font-weight: 600;
 }}
 QLabel#EmptyTitle {{
-    font-size: {size_lg}px;
-    font-weight: 650;
+    font-size: {size_md}px;
+    font-weight: 600;
     color: {text_primary};
 }}
 QLabel#EmptySubtitle {{
-    font-size: {size_sm}px;
-    color: {text_primary};
+    font-size: {size_lg}px;
+    font-weight: 400;
+    color: {text_secondary};
 }}
 QLabel#TimecodeLabel {{
     font-family: {font_family_mono};
     font-size: {size_sm}px;
-    color: {accent};
-    letter-spacing: 0.4px;
+    color: {text_secondary};
+    letter-spacing: 0.2px;
 }}
 QLabel#FrameLabel {{
     font-family: {font_family_mono};
-    font-size: {size_xs}px;
-    color: {text_secondary};
+    font-size: {size_sm}px;
+    font-weight: 500;
+    color: {text_primary};
+    letter-spacing: 0.2px;
+}}
+QWidget#ViewportStage {{
+    background-color: {viewport_void};
 }}
 QSplitter::handle {{
     background: transparent;
     width: {space_sm}px;
 }}
 QToolTip {{
-    background: {text_primary};
-    color: {surface_raised};
-    border: none;
-    border-radius: {radius_sm}px;
-    padding: 6px 10px;
-    font-size: {size_xs}px;
+    background: {surface};
+    color: {text_primary};
+    border: 1px solid {border};
+    border-radius: {radius_md}px;
+    padding: 8px 12px;
+    font-size: {size_sm}px;
 }}

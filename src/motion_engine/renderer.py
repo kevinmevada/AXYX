@@ -56,23 +56,26 @@ FloatArray = NDArray[np.floating[Any]]
 TARGET_RENDER_FPS: int = 120
 JOINT_SPHERE_RESOLUTION: int = 14
 FLOOR_RESOLUTION: int = 1
-GRID_OPACITY: float = 0.16
-GRID_MINOR_OPACITY: float = 0.08
-# Graphite bones / glossy red joints — high metallic for brushed-metal read.
-BONE_METALLIC: float = 0.92
-BONE_ROUGHNESS: float = 0.22
-JOINT_METALLIC: float = 0.88
-JOINT_ROUGHNESS: float = 0.12
-FLOOR_METALLIC: float = 0.08
-FLOOR_ROUGHNESS: float = 0.72
-FLOOR_SPECULAR: float = 0.08
-FOOT_SHADOW_OPACITY: float = 0.22
-BODY_SHADOW_OPACITY: float = 0.08
-CONTACT_SHADOW_RGB: tuple[float, float, float] = (0.42, 0.43, 0.46)
-# Thicker shafts — bones fill more of the figure silhouette.
-BONE_RADIUS_RATIO: float = 0.95
-BONE_RADIUS_MIN: float = 28.0
-VIGNETTE_STRENGTH: float = 0.10
+GRID_OPACITY: float = 0.08
+GRID_MINOR_OPACITY: float = 0.04
+# Stick figure: polished metal shafts + light glowing joint spheres.
+# Joint XYZ come only from the session skeleton — no cosmetic offsets.
+BONE_METALLIC: float = 0.88
+BONE_ROUGHNESS: float = 0.28
+JOINT_METALLIC: float = 0.0
+JOINT_ROUGHNESS: float = 1.0
+FLOOR_METALLIC: float = 0.0
+FLOOR_ROUGHNESS: float = 1.0
+FLOOR_SPECULAR: float = 0.0
+FOOT_SHADOW_OPACITY: float = 0.0
+BODY_SHADOW_OPACITY: float = 0.0
+CONTACT_SHADOW_RGB: tuple[float, float, float] = (0.90, 0.90, 0.90)
+FIGURE_GLOW_OPACITY: float = 0.0
+FIGURE_GLOW_RGB: tuple[float, float, float] = (0.73, 0.65, 0.94)
+# Fallback when a bone has no category profile (should be rare).
+BONE_RADIUS_RATIO: float = 0.55
+BONE_RADIUS_MIN: float = 9.0
+VIGNETTE_STRENGTH: float = 0.0
 
 
 class RendererError(MotionEngineError):
@@ -331,6 +334,7 @@ class PyVistaRenderer(Renderer):
         self._bone_unit_templates: list[np.ndarray] = []
         self._bone_vertex_slices: list[tuple[int, int]] = []
         self._bone_radial_scale: float = 14.0
+        self._bone_radial_scales: list[float] = []
         self._joint_template_pts: np.ndarray | None = None
         self._joint_template_faces: np.ndarray | None = None
         self._joint_points_per_sphere: int = 0
@@ -573,6 +577,7 @@ class PyVistaRenderer(Renderer):
         self._bone_unit_templates = []
         self._bone_vertex_slices = []
         self._bone_radial_scale = 14.0
+        self._bone_radial_scales = []
         self._joint_template_pts = None
         self._joint_template_faces = None
         self._joint_points_per_sphere = 0
@@ -597,6 +602,7 @@ class PyVistaRenderer(Renderer):
         self._bone_unit_templates = []
         self._bone_vertex_slices = []
         self._bone_radial_scale = 14.0
+        self._bone_radial_scales = []
         self._joint_template_pts = None
         self._joint_template_faces = None
         self._joint_points_per_sphere = 0
@@ -754,6 +760,23 @@ class PyVistaRenderer(Renderer):
             emission=emission,
         )
 
+    def _apply_joint_glow(self, actor: Any) -> None:
+        """Unlit light glow on joint spheres only — per-vertex RGB carries region color."""
+        try:
+            prop = actor.GetProperty()
+            prop.SetLighting(False)
+            prop.SetAmbient(1.0)
+            prop.SetDiffuse(0.0)
+            prop.SetSpecular(0.0)
+            if hasattr(prop, "SetMetallic"):
+                prop.SetMetallic(0.0)
+            if hasattr(prop, "SetRoughness"):
+                prop.SetRoughness(1.0)
+            if hasattr(prop, "SetEmissiveFactor"):
+                prop.SetEmissiveFactor(0.45, 0.45, 0.45)
+        except Exception:
+            logger.debug("Joint glow material skipped", exc_info=True)
+
     # ---- flush -----------------------------------------------------------
 
     def _remove_actor(self, key: str) -> None:
@@ -793,12 +816,15 @@ class PyVistaRenderer(Renderer):
         if show_ground and self._ground_args is not None:
             size, color, origin = self._ground_args
             self._floor_origin_z = float(origin[2])
+            void_studio = self.theme.background[0] < 0.2
+            museum = float(self.theme.background[0]) > 0.85
             signature = (
                 round(size, 3),
                 round(float(origin[0]), 3),
                 round(float(origin[1]), 3),
                 round(float(origin[2]), 3),
                 color,
+                "topo_mesh" if museum else ("void" if void_studio else "solid"),
             )
             if self._env_sigs.get("ground") != signature:
                 self._remove_actor("ground")
@@ -806,73 +832,145 @@ class PyVistaRenderer(Renderer):
                 self._remove_actor("floor_fade")
                 self._remove_actor("foot_shadows")
                 self._remove_actor("body_shadow")
+                self._remove_actor("figure_glow")
                 self._remove_actor("floor_glow")
                 self._remove_actor("dust")
                 self._shadow_sig = None
                 self._ground_span = size
-                # Flat photography-studio floor — no curved cove, no fade-to-void.
-                plane = self._pv.Plane(
-                    center=(float(origin[0]), float(origin[1]), float(origin[2])),
-                    direction=(0, 0, 1),
-                    i_size=size * 1.35,
-                    j_size=size * 1.35,
-                    i_resolution=FLOOR_RESOLUTION,
-                    j_resolution=FLOOR_RESOLUTION,
-                )
-                actor = self._plotter.add_mesh(
-                    plane,
-                    color=color,
-                    smooth_shading=True,
-                    ambient=0.22,
-                    diffuse=0.62,
-                    specular=FLOOR_SPECULAR,
-                    name="studio_floor",
-                    render=False,
-                )
-                self._apply_pbr(
-                    actor,
-                    metallic=FLOOR_METALLIC,
-                    roughness=FLOOR_ROUGHNESS,
-                    specular=FLOOR_SPECULAR,
-                    specular_power=12.0,
-                )
-                self._actors["ground"] = actor
-
-                # Soft warm-gray edge rings (meet wall color — never charcoal void).
-                fade_color = self.theme.floor_accent
-                fade_actors = []
-                for ring_i, (inner_r, outer_r, opacity) in enumerate(
-                    (
-                        (0.62, 0.88, 0.10),
-                        (0.88, 1.20, 0.18),
+                if museum:
+                    # Visible translucent topographic mesh on the white void.
+                    # Pure white edges vanish — use soft ink-gray lines + white fill.
+                    res = 40
+                    plane = self._pv.Plane(
+                        center=(float(origin[0]), float(origin[1]), float(origin[2])),
+                        direction=(0, 0, 1),
+                        i_size=size * 1.25,
+                        j_size=size * 1.25,
+                        i_resolution=res,
+                        j_resolution=res,
                     )
-                ):
-                    ring = self._pv.Disc(
-                        center=(
-                            float(origin[0]),
-                            float(origin[1]),
-                            float(origin[2]) + 0.15 + ring_i * 0.03,
-                        ),
-                        inner=size * inner_r,
-                        outer=size * outer_r,
-                        normal=(0, 0, 1),
-                        r_res=1,
-                        c_res=36,
+                    pts = np.asarray(plane.points, dtype=float)
+                    cx = float(origin[0])
+                    cy = float(origin[1])
+                    cz = float(origin[2])
+                    dx = pts[:, 0] - cx
+                    dy = pts[:, 1] - cy
+                    radius = np.sqrt(dx * dx + dy * dy)
+                    amp = max(size * 0.0045, 8.0)
+                    pts[:, 2] = cz + amp * (
+                        0.55 * np.sin(radius / max(size * 0.085, 1.0))
+                        + 0.28 * np.sin(radius / max(size * 0.048, 1.0) + 1.15)
+                        + 0.17 * np.cos(dx / max(size * 0.065, 1.0))
                     )
-                    fade = self._plotter.add_mesh(
-                        ring,
-                        color=fade_color,
-                        opacity=opacity,
-                        smooth_shading=True,
-                        name=f"floor_fade_{ring_i}",
+                    plane.points = pts
+                    # Fill: translucent white. Edges: muted ink so mesh reads on void.
+                    actor = self._plotter.add_mesh(
+                        plane,
+                        color="#FFFFFF",
+                        opacity=0.55,
+                        style="surface",
+                        show_edges=True,
+                        edge_color="#9A9A96",
+                        line_width=1.5,
+                        smooth_shading=False,
+                        name="studio_floor",
                         render=False,
                     )
                     try:
-                        fade.GetProperty().SetLighting(False)
+                        prop = actor.GetProperty()
+                        prop.SetLighting(False)
+                        prop.SetOpacity(0.55)
+                        prop.SetColor(1.0, 1.0, 1.0)
+                        prop.SetEdgeVisibility(True)
+                        prop.SetEdgeColor(0.604, 0.604, 0.588)  # #9A9A96
+                        prop.SetLineWidth(1.5)
+                        prop.SetAmbient(1.0)
+                        prop.SetDiffuse(0.0)
+                        prop.SetSpecular(0.0)
                     except Exception:
                         pass
-                    fade_actors.append(fade)
-                self._actors["floor_fade"] = fade_actors
+                    self._actors["ground"] = actor
+                    # Wireframe overlay for stronger topo read.
+                    wire = self._plotter.add_mesh(
+                        plane,
+                        color="#6E6E6B",
+                        opacity=0.55,
+                        style="wireframe",
+                        line_width=1.0,
+                        name="studio_floor_wire",
+                        render=False,
+                    )
+                    try:
+                        wprop = wire.GetProperty()
+                        wprop.SetLighting(False)
+                        wprop.SetOpacity(0.55)
+                        wprop.SetLineWidth(1.0)
+                        wprop.SetColor(0.431, 0.431, 0.420)  # #6E6E6B
+                    except Exception:
+                        pass
+                    self._actors["floor_fade"] = [wire]
+                elif not void_studio:
+                    plane = self._pv.Plane(
+                        center=(float(origin[0]), float(origin[1]), float(origin[2])),
+                        direction=(0, 0, 1),
+                        i_size=size * 1.35,
+                        j_size=size * 1.35,
+                        i_resolution=FLOOR_RESOLUTION,
+                        j_resolution=FLOOR_RESOLUTION,
+                    )
+                    actor = self._plotter.add_mesh(
+                        plane,
+                        color=color,
+                        smooth_shading=True,
+                        ambient=0.22,
+                        diffuse=0.62,
+                        specular=FLOOR_SPECULAR,
+                        name="studio_floor",
+                        render=False,
+                    )
+                    self._apply_pbr(
+                        actor,
+                        metallic=FLOOR_METALLIC,
+                        roughness=FLOOR_ROUGHNESS,
+                        specular=FLOOR_SPECULAR,
+                        specular_power=12.0,
+                    )
+                    self._actors["ground"] = actor
+
+                    fade_color = self.theme.floor_accent
+                    fade_actors = []
+                    for ring_i, (inner_r, outer_r, opacity) in enumerate(
+                        (
+                            (0.62, 0.88, 0.10),
+                            (0.88, 1.20, 0.18),
+                        )
+                    ):
+                        ring = self._pv.Disc(
+                            center=(
+                                float(origin[0]),
+                                float(origin[1]),
+                                float(origin[2]) + 0.15 + ring_i * 0.03,
+                            ),
+                            inner=size * inner_r,
+                            outer=size * outer_r,
+                            normal=(0, 0, 1),
+                            r_res=1,
+                            c_res=36,
+                        )
+                        fade = self._plotter.add_mesh(
+                            ring,
+                            color=fade_color,
+                            opacity=opacity,
+                            smooth_shading=True,
+                            name=f"floor_fade_{ring_i}",
+                            render=False,
+                        )
+                        try:
+                            fade.GetProperty().SetLighting(False)
+                        except Exception:
+                            pass
+                        fade_actors.append(fade)
+                    self._actors["floor_fade"] = fade_actors
                 self._env_sigs["ground"] = signature
 
         if show_grid and self._grid_args is not None:
@@ -888,36 +986,29 @@ class PyVistaRenderer(Renderer):
             if self._env_sigs.get("grid") != signature:
                 self._remove_actor("grid")
                 self._remove_actor("grid_minor")
-                major, minor = self._build_grid_meshes(size, divisions, origin)
-                actors = []
-                major_act = self._plotter.add_mesh(
-                    major,
-                    color=color,
-                    line_width=1.0,
-                    opacity=GRID_OPACITY,
-                    name="studio_grid",
-                    render=False,
-                )
-                try:
-                    major_act.GetProperty().SetLighting(False)
-                except Exception:
-                    pass
-                actors.append(major_act)
-                if minor.n_points > 0:
-                    minor_act = self._plotter.add_mesh(
-                        minor,
-                        color=self.theme.grid_minor,
-                        line_width=0.8,
-                        opacity=GRID_MINOR_OPACITY,
-                        name="studio_grid_minor",
+                self._remove_actor("grid_fade_outer")
+                self._remove_actor("grid_fade_mid")
+                bands = self._build_grid_bands(size, divisions, origin)
+                grid_actors: list[Any] = []
+                for band_name, mesh, opacity, band_color in bands:
+                    if mesh.n_points == 0:
+                        continue
+                    act = self._plotter.add_mesh(
+                        mesh,
+                        color=band_color,
+                        line_width=1.0 if "major" in band_name else 0.8,
+                        opacity=opacity,
+                        name=f"studio_{band_name}",
                         render=False,
                     )
                     try:
-                        minor_act.GetProperty().SetLighting(False)
+                        act.GetProperty().SetLighting(False)
                     except Exception:
                         pass
-                    self._actors["grid_minor"] = minor_act
-                self._actors["grid"] = actors
+                    grid_actors.append(act)
+                    if band_name.startswith("grid_minor"):
+                        self._actors["grid_minor"] = act
+                self._actors["grid"] = grid_actors
                 self._env_sigs["grid"] = signature
 
         if show_axes and self._axes_args is not None:
@@ -1074,6 +1165,60 @@ class PyVistaRenderer(Renderer):
             bucket.extend((x_line, y_line))
         return self._merge_lines(major_lines), self._merge_lines(minor_lines)
 
+    def _build_grid_bands(
+        self, size: float, divisions: int, origin: np.ndarray
+    ) -> list[tuple[str, Any, float, ColorRGB]]:
+        """Grid lines in concentric bands — opacity falls off toward edges."""
+        half = size * 0.42
+        step = size / max(divisions, 1)
+        ox, oy, oz = float(origin[0]), float(origin[1]), float(origin[2]) + 0.8
+        bands: dict[str, list[Any]] = {
+            "grid_major_inner": [],
+            "grid_major_mid": [],
+            "grid_major_outer": [],
+            "grid_minor_inner": [],
+            "grid_minor_mid": [],
+            "grid_minor_outer": [],
+        }
+
+        def _band(t: float) -> str:
+            dist = abs(t)
+            if dist <= half * 0.55:
+                return "inner"
+            if dist <= half * 0.82:
+                return "mid"
+            return "outer"
+
+        for i in range(divisions + 1):
+            t = -half + i * step
+            is_major = i % 5 == 0 or i == 0 or i == divisions
+            prefix = "grid_major" if is_major else "grid_minor"
+            x_line = self._pv.Line(
+                (ox + t, oy - half, oz), (ox + t, oy + half, oz)
+            )
+            y_line = self._pv.Line(
+                (ox - half, oy + t, oz), (ox + half, oy + t, oz)
+            )
+            for line, coord in ((x_line, t), (y_line, t)):
+                bucket = f"{prefix}_{_band(coord)}"
+                bands[bucket].append(line)
+
+        opacity_map = {
+            "inner": (GRID_OPACITY, GRID_MINOR_OPACITY),
+            "mid": (GRID_OPACITY * 0.55, GRID_MINOR_OPACITY * 0.55),
+            "outer": (GRID_OPACITY * 0.22, GRID_MINOR_OPACITY * 0.22),
+        }
+        out: list[tuple[str, Any, float, ColorRGB]] = []
+        for key, lines in bands.items():
+            if not lines:
+                continue
+            tier = key.rsplit("_", 1)[-1]
+            is_major = "major" in key
+            opacity = opacity_map[tier][0 if is_major else 1]
+            color = self.theme.grid if is_major else self.theme.grid_minor
+            out.append((key, self._merge_lines(lines), opacity, color))
+        return out
+
     def _merge_lines(self, lines: list[Any]) -> Any:
         if not lines:
             return self._pv.PolyData()
@@ -1161,25 +1306,28 @@ class PyVistaRenderer(Renderer):
     def _build_skeleton_actors(self, has_labels: bool) -> None:
         assert self._plotter is not None
         if self._bone_segs:
+            museum = float(self.theme.background[0]) > 0.85
+            bone_color = self.theme.bone
+            if not museum and len(set(self._bone_colors)) == 1:
+                bone_color = self._bone_colors[0]
             base_r = (
                 float(np.median(self._joint_radii))
                 if self._joint_radii
                 else self._joint_radius
             )
             self._bone_radial_scale = max(base_r * BONE_RADIUS_RATIO, BONE_RADIUS_MIN)
-            self._bone_mesh = self._build_anatomical_bone_mesh(self._bone_segs)
-            bone_color = (
-                self._bone_colors[0]
-                if len(set(self._bone_colors)) == 1
-                else self.theme.bone
+            self._bone_mesh = self._build_anatomical_bone_mesh(
+                self._bone_segs, base_joint_radius=base_r
             )
             actor = self._plotter.add_mesh(
                 self._bone_mesh,
                 color=bone_color,
                 smooth_shading=True,
+                opacity=1.0,
                 name="bones",
                 render=False,
             )
+            # Polished metal shafts — tight specular highlight along the cylinder.
             self._apply_pbr(
                 actor,
                 metallic=BONE_METALLIC,
@@ -1198,6 +1346,7 @@ class PyVistaRenderer(Renderer):
                 self._joint_points_per_sphere,
             ) = self._make_joint_mesh(self._joint_pts, radii)
             unique = set(self._joint_colors)
+            # Region colors (head/hands/…) need per-sphere RGB in museum white too.
             use_rgb = len(unique) > 1
             if use_rgb:
                 n = self._joint_points_per_sphere
@@ -1219,27 +1368,16 @@ class PyVistaRenderer(Renderer):
                     render=False,
                 )
             else:
+                museum = float(self.theme.background[0]) > 0.85
+                joint_color = self.theme.joint if museum else self._joint_colors[0]
                 actor = self._plotter.add_mesh(
                     self._joint_mesh,
-                    color=self._joint_colors[0],
+                    color=joint_color,
                     smooth_shading=True,
                     name="joints",
                     render=False,
                 )
-            self._apply_pbr(
-                actor,
-                metallic=JOINT_METALLIC,
-                roughness=JOINT_ROUGHNESS,
-                specular=0.70,
-                specular_power=80.0,
-            )
-            if any(c == self.theme.selected for c in self._joint_colors):
-                try:
-                    prop = actor.GetProperty()
-                    prop.SetAmbient(0.18)
-                    prop.SetDiffuse(0.85)
-                except Exception:
-                    pass
+            self._apply_joint_glow(actor)
             self._actors["joints"] = actor
 
         if has_labels:
@@ -1293,8 +1431,20 @@ class PyVistaRenderer(Renderer):
                 self._actors["avatar_body"] = actor
                 self._avatar_mesh = grid
                 return
-            self._avatar_mesh.points = pts
+            self._avatar_mesh.points = np.ascontiguousarray(pts, dtype=np.float64)
             self._avatar_mesh.Modified()
+            # Force VTK pipeline to pick up in-place point edits every frame.
+            try:
+                actor = self._actors.get("avatar_body")
+                mapper = getattr(actor, "mapper", None) if actor is not None else None
+                if mapper is not None:
+                    mapper.Update()
+                elif actor is not None and hasattr(actor, "GetMapper"):
+                    vtk_mapper = actor.GetMapper()
+                    if vtk_mapper is not None:
+                        vtk_mapper.Update()
+            except Exception:
+                logger.debug("Avatar mapper update failed", exc_info=True)
 
     def _update_skeleton_positions(self) -> None:
         assert self._plotter is not None
@@ -1323,13 +1473,29 @@ class PyVistaRenderer(Renderer):
             for index, (start, end) in enumerate(self._bone_segs):
                 begin, end_idx = self._bone_vertex_slices[index]
                 template = self._bone_unit_templates[index]
+                if index < len(self._bone_radial_scales):
+                    scale = self._bone_radial_scales[index]
+                else:
+                    scale = self._bone_radial_scale
                 points[begin:end_idx] = transform_bone(
                     template,
                     start,
                     end,
-                    radial_scale=self._bone_radial_scale,
+                    radial_scale=scale,
                 )
             self._bone_mesh.points = points
+            self._bone_mesh.Modified()
+        elif self._bone_mesh is not None and self._bone_segs and not self._bone_unit_templates:
+            n = len(self._bone_segs)
+            if self._bone_mesh.n_points != n * 2:
+                self._invalidate_skeleton_cache()
+                self._skeleton_sig = None
+                return
+            pts = np.empty((n * 2, 3), dtype=float)
+            for i, (start, end) in enumerate(self._bone_segs):
+                pts[2 * i] = start
+                pts[2 * i + 1] = end
+            self._bone_mesh.points = pts
             self._bone_mesh.Modified()
 
         if self._labels:
@@ -1399,6 +1565,7 @@ class PyVistaRenderer(Renderer):
             self._shadow_sig = build_key
             self._remove_actor("foot_shadows")
             self._remove_actor("body_shadow")
+            self._remove_actor("figure_glow")
             self._remove_actor("floor_glow")
             shadow_color = CONTACT_SHADOW_RGB
 
@@ -1451,6 +1618,30 @@ class PyVistaRenderer(Renderer):
                     pass
                 self._actors["body_shadow"] = body_actor
 
+                if FIGURE_GLOW_OPACITY > 0.01:
+                    center = np.mean(np.asarray(self._joint_pts, dtype=float), axis=0)
+                    glow = self._pv.Disc(
+                        center=(float(center[0]), float(center[1]), floor_z + 0.6),
+                        inner=0.0,
+                        outer=max(span * 4.5, 180.0),
+                        normal=(0, 0, 1),
+                        r_res=1,
+                        c_res=48,
+                    )
+                    glow_actor = self._plotter.add_mesh(
+                        glow,
+                        color=FIGURE_GLOW_RGB,
+                        opacity=FIGURE_GLOW_OPACITY,
+                        smooth_shading=True,
+                        name="figure_glow",
+                        render=False,
+                    )
+                    try:
+                        glow_actor.GetProperty().SetLighting(False)
+                    except Exception:
+                        pass
+                    self._actors["figure_glow"] = glow_actor
+
         foot_actors = self._actors.get("foot_shadows")
         if isinstance(foot_actors, list):
             for actor, foot in zip(foot_actors, self._foot_positions, strict=False):
@@ -1469,16 +1660,34 @@ class PyVistaRenderer(Renderer):
                 body_actor.SetPosition(float(center[0]), float(center[1]), 0.0)
             except Exception:
                 pass
+        glow_actor = self._actors.get("figure_glow")
+        if glow_actor is not None:
+            try:
+                glow_actor.SetPosition(float(center[0]), float(center[1]), 0.0)
+            except Exception:
+                pass
 
     def _build_anatomical_bone_mesh(
         self,
         segments: Sequence[tuple[np.ndarray, np.ndarray]],
+        *,
+        base_joint_radius: float | None = None,
     ) -> Any:
         """Merge anatomical cortical bones into a single drawable mesh."""
         parts: list[tuple[np.ndarray, np.ndarray]] = []
         self._bone_unit_templates = []
         self._bone_vertex_slices = []
+        self._bone_radial_scales = []
         vertex_offset = 0
+        base_r = (
+            float(base_joint_radius)
+            if base_joint_radius is not None
+            else (
+                float(np.median(self._joint_radii))
+                if self._joint_radii
+                else float(self._joint_radius)
+            )
+        )
 
         for index, (start, end) in enumerate(segments):
             label = (
@@ -1488,11 +1697,13 @@ class PyVistaRenderer(Renderer):
             )
             profile = profile_for_bone(label)
             unit_pts, unit_faces = build_unit_bone_template(profile)
+            radial = profile.world_radius(base_r)
+            self._bone_radial_scales.append(radial)
             placed = transform_bone(
                 unit_pts,
                 start,
                 end,
-                radial_scale=self._bone_radial_scale,
+                radial_scale=radial,
             )
             parts.append((placed, unit_faces))
             self._bone_unit_templates.append(unit_pts)

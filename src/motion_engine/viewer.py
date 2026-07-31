@@ -21,7 +21,7 @@ from typing import Any, Callable
 import numpy as np
 
 from motion_engine.camera import BoundingBox, CameraController, CameraPreset, CameraState
-from motion_engine.colors import Theme, get_theme
+from motion_engine.colors import Theme, get_theme, joint_region_color
 from motion_engine.exceptions import MotionEngineError
 from motion_engine.playback import PlaybackController, PlaybackState
 from motion_engine.renderer import (
@@ -36,12 +36,12 @@ from motion_engine.timeline import Timeline
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_JOINT_RADIUS_RATIO: float = 0.036
+DEFAULT_JOINT_RADIUS_RATIO: float = 0.0175
 DEFAULT_GROUND_PADDING_RATIO: float = 1.8
 DEFAULT_AXES_LENGTH_RATIO: float = 0.22
 DEFAULT_GRID_DIVISIONS: int = 24
-MIN_JOINT_RADIUS: float = 26.0
-MAX_JOINT_RADIUS: float = 72.0
+MIN_JOINT_RADIUS: float = 16.0
+MAX_JOINT_RADIUS: float = 38.0
 # Keep joint spheres / bone shafts from sinking through the studio floor.
 FLOOR_CLEARANCE_RATIO: float = 1.15
 FLOOR_CLEARANCE_PAD: float = 6.0
@@ -49,24 +49,25 @@ TARGET_RENDER_FPS: int = 120
 RENDER_TICK_MS: int = max(1, int(1000 / TARGET_RENDER_FPS))
 
 # Relative joint scales — hips/knees/spine larger, extremities smaller.
+# Floor 0.75 keeps nothing needle-thin; top 1.35 keeps hierarchy.
 _JOINT_SIZE_SCALE: dict[str, float] = {
-    "pelvis": 1.45,
-    "hip": 1.40,
-    "knee": 1.35,
-    "ankle": 1.15,
-    "foot": 0.95,
-    "toe": 0.80,
-    "spine": 1.35,
-    "thorax": 1.30,
-    "chest": 1.30,
-    "c7": 1.20,
-    "neck": 1.15,
-    "head": 1.30,
-    "shoulder": 1.25,
-    "clavicle": 1.10,
-    "elbow": 1.20,
-    "wrist": 1.05,
-    "hand": 0.85,
+    "pelvis": 1.35,
+    "hip": 1.30,
+    "knee": 1.25,
+    "ankle": 1.10,
+    "foot": 0.90,
+    "toe": 0.75,
+    "spine": 1.25,
+    "thorax": 1.20,
+    "chest": 1.20,
+    "c7": 1.12,
+    "neck": 1.08,
+    "head": 1.22,
+    "shoulder": 1.18,
+    "clavicle": 1.00,
+    "elbow": 1.12,
+    "wrist": 0.95,
+    "hand": 0.80,
     "finger": 0.75,
 }
 
@@ -76,7 +77,7 @@ def _joint_radius_scale(joint_name: str) -> float:
     for token, scale in _JOINT_SIZE_SCALE.items():
         if token in key:
             return scale
-    return 1.15
+    return 1.0
 
 
 class ViewerError(MotionEngineError):
@@ -387,10 +388,6 @@ class SkeletonViewer(Viewer):
 
         arr = np.vstack(all_points)
         min_joint_z = float(arr[:, 2].min())
-        horiz = arr[:, :2]
-        horiz_mid = 0.5 * (horiz.min(axis=0) + horiz.max(axis=0))
-        horiz_span = float(np.max(horiz.max(axis=0) - horiz.min(axis=0)))
-        self._ground_span = max(horiz_span * 1.55, 2600.0)
         pose0 = [
             np.asarray(p, dtype=float)
             for p in self.skeleton.poses[0].joint_positions.values()
@@ -401,10 +398,12 @@ class SkeletonViewer(Viewer):
             self._bbox_center = 0.5 * (p0.min(axis=0) + p0.max(axis=0))
             self._bbox_extent = float(np.max(p0.max(axis=0) - p0.min(axis=0)) * 0.5)
             body_bounds = BoundingBox.from_points(p0)
+            subject_height = float(max(p0[:, 2].max() - min_joint_z, 1000.0))
         else:
             self._bbox_center = 0.5 * (arr.min(axis=0) + arr.max(axis=0))
             self._bbox_extent = 1000.0
             body_bounds = BoundingBox.from_points(arr)
+            subject_height = float(max(arr[:, 2].max() - min_joint_z, 1000.0))
         self._bbox_extent = max(self._bbox_extent, 250.0)
         self.camera.set_model_bounds(body_bounds)
 
@@ -415,13 +414,22 @@ class SkeletonViewer(Viewer):
                 MAX_JOINT_RADIUS,
             )
         )
-        # Drop the floor under the thickest near-ground joint so spheres don't clip.
         clearance = self._joint_radius * FLOOR_CLEARANCE_RATIO + FLOOR_CLEARANCE_PAD
         self._floor_z = min_joint_z - clearance
+
+        from motion_engine.capture_volume import CaptureVolume
+
+        volume = CaptureVolume.from_motion(
+            all_points,
+            floor_z=self._floor_z,
+            subject_height=subject_height,
+        )
+        self.camera.set_capture_volume(volume)
+        self._ground_span = volume.ground_size
         self._ground_origin = (
-            float(horiz_mid[0]),
-            float(horiz_mid[1]),
-            float(self._floor_z),
+            float(volume.center[0]),
+            float(volume.center[1]),
+            float(volume.floor_z),
         )
 
     def _draw_frame(self, pose: Pose) -> None:
@@ -475,7 +483,7 @@ class SkeletonViewer(Viewer):
                         else self.theme.bone
                     )
                     self.renderer.draw_line(
-                        start, end, color, width=3.0, name=f"bone:{bone_name}"
+                        start, end, color, width=3.6, name=f"bone:{bone_name}"
                     )
                     if self.show_bone_labels:
                         mid = 0.5 * (np.asarray(start) + np.asarray(end))
@@ -490,7 +498,7 @@ class SkeletonViewer(Viewer):
                     color = (
                         self.theme.selected
                         if joint_name == self.selected_joint
-                        else self.theme.joint
+                        else joint_region_color(joint_name, self.theme.joint)
                     )
                     self.renderer.draw_sphere(
                         position,

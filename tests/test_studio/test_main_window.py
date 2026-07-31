@@ -20,10 +20,15 @@ def test_main_window_builds_and_updates_status() -> None:
         application="MainWindowSmoke",
     )
     window = MainWindow(settings)
+    window.show()
     window.show_welcome(True)
     assert window._stack.currentWidget() is window.welcome
+    assert window._explorer_dock.isHidden()
     window.show_welcome(False)
     assert window._stack.currentWidget() is window._workspace
+    assert window._dataset_open
+    assert not window._explorer_dock.isHidden()
+    assert window.menuBar().isHidden()
     window.update_status(
         StatusSnapshot(dataset="x.mat", subject="S2", session="WU01", frames=10)
     )

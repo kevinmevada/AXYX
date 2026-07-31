@@ -229,7 +229,7 @@ class MappingProfile:
     root_source: str = "Pelvis"
     root_target: str = "pelvis"
     source_coords: CoordinateSystem = AXYX_COORDS
-    target_coords: CoordinateSystem = Y_UP_RIGHT
+    target_coords: CoordinateSystem = AXYX_COORDS
     ignore_source: tuple[str, ...] = ()
     ignore_target: tuple[str, ...] = ()
     joint_limits: tuple[JointLimit, ...] = ()

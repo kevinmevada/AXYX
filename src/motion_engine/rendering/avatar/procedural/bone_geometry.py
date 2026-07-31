@@ -4,6 +4,9 @@ Procedural anatomical bone meshes (canonical home under rendering.avatar.procedu
 Each bone is a cortical shaft with epiphyseal flares (femur, tibia, humerus, …)
 — not a cylinder / tube. Templates are built once per profile and rigidly
 transformed each animation frame (no per-frame mesh regeneration).
+
+World thickness is ``max(base_joint_radius * shaft_ratio, min_radius)`` so the
+figure stays solid while femur remains visibly thicker than a finger bone.
 """
 
 from __future__ import annotations
@@ -20,43 +23,108 @@ FloatArray = NDArray[np.floating]
 
 @dataclass(frozen=True, slots=True)
 class BoneProfile:
-    """Normalized cortical bone cross-section along the shaft (t in 0..1)."""
+    """Cortical cross-section: world scale + normalized epiphyseal shape.
 
-    shaft_radius: float
+    ``shaft_ratio`` / ``min_radius`` set world midshaft thickness from the
+    average joint radius. The unit template is midshaft=1 so epiphyseal
+    flare is shape-only; ``transform_bone`` applies the world radial scale.
+    """
+
+    shaft_ratio: float
+    min_radius: float
     epiphysis_boost: float
     epiphysis_sigma: float
     axial_slices: int = 10
     radial_sides: int = 14
 
+    @property
+    def shaft_radius(self) -> float:
+        """Alias for :attr:`shaft_ratio` (legacy call sites / tests)."""
+        return self.shaft_ratio
 
+    def world_radius(self, base_joint_radius: float) -> float:
+        """World midshaft radius from joint size — never below ``min_radius``."""
+        return max(float(base_joint_radius) * self.shaft_ratio, self.min_radius)
+
+
+# Category table — chunky absolute floors, taper hierarchy preserved.
 _PROFILES: Final[dict[str, BoneProfile]] = {
-    "uniform": BoneProfile(0.10, 0.0, 0.12, axial_slices=8, radial_sides=12),
+    # Femur / pelvis-hip — thickest load-bearing
+    "pelvis_hip": BoneProfile(0.85, 16.0, 0.35, 0.18, axial_slices=8, radial_sides=14),
+    "femur": BoneProfile(0.85, 16.0, 0.45, 0.14, axial_slices=10, radial_sides=14),
+    # Spine / tibia
+    "spine": BoneProfile(0.65, 13.0, 0.25, 0.16, axial_slices=8, radial_sides=14),
+    "tibia": BoneProfile(0.65, 13.0, 0.35, 0.14, axial_slices=10, radial_sides=14),
+    # Humerus
+    "humerus": BoneProfile(0.60, 11.0, 0.35, 0.15, axial_slices=8, radial_sides=12),
+    # Forearm / cervical
+    "forearm": BoneProfile(0.55, 9.0, 0.30, 0.15, axial_slices=8, radial_sides=12),
+    "cervical": BoneProfile(0.55, 9.0, 0.25, 0.18, axial_slices=6, radial_sides=12),
+    "uniform": BoneProfile(0.55, 9.0, 0.0, 0.12, axial_slices=8, radial_sides=12),
+    # Clavicle / foot / skull
+    "clavicle": BoneProfile(0.50, 8.0, 0.20, 0.20, axial_slices=6, radial_sides=10),
+    "foot": BoneProfile(0.50, 8.0, 0.20, 0.16, axial_slices=6, radial_sides=10),
+    "skull": BoneProfile(0.50, 8.0, 0.15, 0.20, axial_slices=6, radial_sides=10),
+    # Hand / toe
+    "hand": BoneProfile(0.45, 7.0, 0.15, 0.20, axial_slices=6, radial_sides=10),
+    "toe": BoneProfile(0.45, 7.0, 0.15, 0.20, axial_slices=6, radial_sides=10),
 }
 
 _UNIFORM_PROFILE: Final[BoneProfile] = _PROFILES["uniform"]
+
+# Ordered (substring, profile_key) rules. Matched against the bone name with
+# any leading L/R side prefix stripped, longest/most-specific first so e.g.
+# "PelvisHip" doesn't get shadowed by a looser "Pelvis" rule.
+_BONE_NAME_RULES: Final[tuple[tuple[str, str], ...]] = (
+    ("PelvisHip", "pelvis_hip"),
+    ("Femur", "femur"),
+    ("Tibia", "tibia"),
+    ("Toe", "toe"),
+    ("Foot", "foot"),
+    ("Clavicle", "clavicle"),
+    ("Humerus", "humerus"),
+    ("Forearm", "forearm"),
+    ("Hand", "hand"),
+    ("Cervical", "cervical"),
+    ("Skull", "skull"),
+    ("Spine", "spine"),
+)
 
 _TEMPLATE_CACHE: dict[str, tuple[FloatArray, np.ndarray]] = {}
 
 
 def profile_for_bone(bone_name: str) -> BoneProfile:
-    """Every segment uses the same cortical cross-section (world-constant thickness)."""
-    _ = bone_name
+    """Look up the cortical cross-section for a bone by anatomical type.
+
+    Bone names follow the ``[L|R]<Type>`` convention from
+    ``skeleton_definition.yaml`` (e.g. ``LFemur``, ``RClavicle``,
+    ``Spine``). The side prefix is stripped, then matched against known
+    bone-type substrings so every bone gets its own thickness and
+    epiphyseal taper instead of one world-constant cylinder. Unrecognized
+    names fall back to the flat uniform profile rather than erroring.
+    """
+    name = bone_name.removeprefix("bone:")
+    if name[:1] in ("L", "R") and len(name) > 1 and name[1:2].isupper():
+        name = name[1:]
+    for substring, profile_key in _BONE_NAME_RULES:
+        if substring in name:
+            return _PROFILES[profile_key]
     return _UNIFORM_PROFILE
 
 
 def radius_at(profile: BoneProfile, t: float) -> float:
-    """Cortical radius with smooth epiphyseal bulges at t≈0 and t≈1."""
+    """Unit midshaft (=1) with smooth epiphyseal bulges at t≈0 and t≈1."""
     t = float(np.clip(t, 0.0, 1.0))
     sigma = max(profile.epiphysis_sigma, 1e-3)
     proximal = math.exp(-((t / sigma) ** 2))
     distal = math.exp(-(((1.0 - t) / sigma) ** 2))
-    return profile.shaft_radius * (1.0 + profile.epiphysis_boost * (proximal + distal))
+    return 1.0 * (1.0 + profile.epiphysis_boost * (proximal + distal))
 
 
 def build_unit_bone_template(profile: BoneProfile) -> tuple[FloatArray, np.ndarray]:
     """Return (vertices, faces) for a unit-length bone along local +Z."""
     cache_key = (
-        profile.shaft_radius,
+        "unit_v2",
         profile.epiphysis_boost,
         profile.epiphysis_sigma,
         profile.axial_slices,
@@ -89,7 +157,7 @@ def build_unit_bone_template(profile: BoneProfile) -> tuple[FloatArray, np.ndarr
             faces.append((a, c, b))
             faces.append((b, c, d))
 
-  # Cap proximal end (slightly rounded epiphysis)
+    # Cap proximal end (slightly rounded epiphysis)
     center_top = len(vertices)
     vertices.append((0.0, 0.0, 0.0))
     for side in range(sides):
@@ -138,8 +206,8 @@ def transform_bone(
 ) -> FloatArray:
     """Rigidly place a unit template between ``start`` and ``end``.
 
-    ``radial_scale`` sets world-space thickness (mm). Only the bone axis is
-  stretched to joint distance — cross-section does not grow on long bones.
+    ``radial_scale`` is the world midshaft radius. Only the bone axis is
+    stretched to joint distance — cross-section does not grow on long bones.
     """
     start = np.asarray(start, dtype=float)
     end = np.asarray(end, dtype=float)
@@ -163,8 +231,18 @@ def merge_bone_meshes(
     all_pts: list[FloatArray] = []
     all_faces: list[np.ndarray] = []
     offset = 0
-    for points, faces in parts:
-        all_pts.append(points)
+    for pts, faces in parts:
+        all_pts.append(pts)
         all_faces.append(faces + offset)
-        offset += int(points.shape[0])
+        offset += int(pts.shape[0])
     return np.vstack(all_pts), np.vstack(all_faces)
+
+
+__all__ = [
+    "BoneProfile",
+    "build_unit_bone_template",
+    "merge_bone_meshes",
+    "profile_for_bone",
+    "radius_at",
+    "transform_bone",
+]

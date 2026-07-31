@@ -1,156 +1,253 @@
 QPushButton {{
-    background: {control};
-    border: 1px solid {glass_edge};
+    background: transparent;
+    border: none;
     border-radius: {radius_md}px;
-    padding: 10px 18px;
-    font-weight: 600;
-    color: {text_primary};
+    padding: 8px 12px;
+    font-weight: 500;
+    color: {text_secondary};
 }}
 QPushButton:hover {{
-    background: {glass_strong};
-    border-color: {border_strong};
+    color: {text_primary};
+    background: {hover};
 }}
 QPushButton:pressed {{
+    color: {text_primary};
     background: {surface_sunken};
 }}
 QPushButton:disabled {{
     color: {text_disabled};
-    border-color: {border_subtle};
 }}
 QPushButton:focus {{
-    border: 2px solid {focus_ring};
-    padding: 9px 17px;
+    border: none;
 }}
 QPushButton#PrimaryButton {{
     background: {accent};
+    /* Fusion needs a real border to clip fills to border-radius on Windows. */
     border: 1px solid {accent};
     color: {text_on_accent};
-    border-radius: {radius_md}px;
-    padding: 12px 24px;
-    font-size: {size_lg}px;
+    border-radius: {radius_cta}px;
+    padding: 14px 32px;
+    min-height: 52px;
+    font-size: {size_md}px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
 }}
 QPushButton#PrimaryButton:hover {{
     background: {accent_hover};
-    border-color: {accent_hover};
+    border: 1px solid {accent_hover};
+    color: {text_on_accent};
 }}
 QPushButton#PrimaryButton:pressed {{
     background: {accent_pressed};
-    border-color: {accent_pressed};
+    border: 1px solid {accent_pressed};
+    color: {text_on_accent};
+}}
+QPushButton#PrimaryButton:disabled {{
+    background: {accent_muted};
+    border: 1px solid {accent_muted};
+    color: {text_secondary};
+}}
+/* Top-bar chrome — one 12px / 32px baseline for camera + viz + display */
+QPushButton#SegmentButton {{
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: {radius_sm}px;
+    padding: 0 10px;
+    margin: 0;
+    font-family: {font_family};
+    font-weight: 600;
+    font-size: {size_sm}px;
+    letter-spacing: 0.2px;
+    min-width: 56px;
+    min-height: 32px;
+    max-height: 32px;
+    color: {text_muted};
+}}
+QPushButton#SegmentButton:checked {{
+    background: transparent;
+    color: {text_primary};
+    border-bottom: 2px solid {accent};
+}}
+QPushButton#SegmentButton:hover:!checked {{
+    background: {hover};
+    color: {text_secondary};
 }}
 QPushButton#GhostButton {{
     background: transparent;
-    border: 1px solid transparent;
+    border: none;
+    border-radius: {radius_md}px;
     color: {text_secondary};
+    font-family: {font_family};
+    font-size: {size_sm}px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    min-height: 32px;
+    max-height: 32px;
+    padding: 0 10px;
 }}
 QPushButton#GhostButton:hover {{
-    background: {surface_overlay};
     color: {text_primary};
-}}
-QPushButton#WorkspaceChip {{
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: {radius_pill}px;
-    padding: 7px 14px;
-    font-weight: 600;
-    font-size: {size_sm}px;
-    color: {text_secondary};
-}}
-QPushButton#WorkspaceChip:hover {{
-    background: {surface_overlay};
-    color: {text_primary};
-}}
-QPushButton#WorkspaceChip:checked {{
-    background: {selection_fill};
-    border: 1px solid {accent_border};
-    color: {accent_pressed};
-}}
-QPushButton#SegmentButton {{
-    background: {control};
-    border: 1px solid {border};
-    border-radius: 0px;
-    padding: 4px 10px;
-    font-weight: 600;
-    font-size: {size_xs}px;
-    min-width: 44px;
-    max-height: 28px;
-    color: {text_secondary};
-}}
-QPushButton#SegmentButton[segment="first"] {{
-    border-top-left-radius: {radius_md}px;
-    border-bottom-left-radius: {radius_md}px;
-}}
-QPushButton#SegmentButton[segment="last"] {{
-    border-top-right-radius: {radius_md}px;
-    border-bottom-right-radius: {radius_md}px;
-}}
-QPushButton#SegmentButton:checked {{
-    background: {selection_fill};
-    color: {accent_pressed};
-    border-color: {accent_border};
-}}
-QPushButton#SegmentButton:hover:!checked {{
-    background: {surface_raised};
+    background: {hover};
 }}
 QToolButton {{
-    background: {control};
-    border: 1px solid {glass_edge};
+    background: transparent;
+    border: none;
     border-radius: {radius_md}px;
-    padding: 8px 12px;
-    font-weight: 600;
-    color: {text_primary};
+    padding: 4px;
+    font-family: {font_family};
+    font-weight: 500;
+    color: {text_secondary};
 }}
 QToolButton:hover {{
-    background: {glass_strong};
-    border-color: {accent_border};
+    color: {text_primary};
+    background: {hover};
 }}
-QToolButton:checked, QToolButton:pressed {{
+QToolButton:checked {{
+    color: {text_primary};
     background: {selection_fill};
-    color: {accent_pressed};
-    border-color: {accent_border};
+}}
+QToolButton:pressed {{
+    color: {text_primary};
+    background: {surface_sunken};
 }}
 QToolButton:focus {{
-    border: 2px solid {focus_ring};
+    border: none;
 }}
-QToolButton#TransportButton {{
-    border-radius: {radius_pill}px;
-    padding: 4px;
-    min-width: 28px;
-    min-height: 28px;
-    max-width: 28px;
-    max-height: 28px;
-    background: {control};
+QToolButton#TransportButton,
+QToolButton#StopTransportButton,
+QToolButton#PlayTransportButton {{
+    border-radius: {radius_md}px;
+    padding: 0;
+    margin: 0;
+    min-width: 48px;
+    min-height: 48px;
+    max-width: 48px;
+    max-height: 48px;
+    background: transparent;
+    border: none;
 }}
-QToolButton#TransportButton:checked,
-QToolButton#TransportButton:pressed {{
-    background: {accent};
-    color: {text_on_accent};
-    border-color: {accent};
+QToolButton#TransportButton:hover,
+QToolButton#StopTransportButton:hover,
+QToolButton#PlayTransportButton:hover {{
+    background: {hover};
+    border: none;
+    color: {text_primary};
+}}
+QToolButton#TransportButton:pressed,
+QToolButton#StopTransportButton:pressed,
+QToolButton#PlayTransportButton:pressed {{
+    background: {surface_sunken};
+    border: none;
+    color: {accent};
+}}
+QToolButton#TransportButton:focus,
+QToolButton#StopTransportButton:focus,
+QToolButton#PlayTransportButton:focus {{
+    background: transparent;
+    border: none;
+    outline: none;
 }}
 QToolButton#LoopButton {{
-    min-height: 28px;
-    max-height: 28px;
-    padding: 3px 10px;
+    min-height: 32px;
+    max-height: 32px;
+    padding: 0 12px;
     border-radius: {radius_pill}px;
+    background: transparent;
+    border: none;
+    font-family: {font_family};
+    font-size: {size_sm}px;
+    font-weight: 500;
+    color: {text_muted};
+}}
+QToolButton#LoopButton:hover {{
     color: {text_secondary};
+    background: {hover};
 }}
 QToolButton#LoopButton:checked {{
     background: {selection_fill};
-    color: {accent_pressed};
-    border-color: {accent_border};
+    color: {accent};
+    border: none;
 }}
-QToolButton#IconChrome {{
-    background: {control};
-    border: 1px solid {glass_edge};
-    padding: 4px 8px;
-    border-radius: {radius_md}px;
-    max-height: 28px;
+QComboBox#SpeedPill,
+QComboBox#CompactSpeed {{
+    min-height: 32px;
+    max-height: 32px;
+    padding: 0 28px 0 12px;
+    font-family: {font_family};
+    font-size: {size_sm}px;
+    font-weight: 500;
+    border-radius: {radius_pill}px;
+    border: 1px solid {border};
+    background: {surface_sunken};
+    color: {text_secondary};
 }}
-QToolButton#IconChrome:hover {{
-    background: {glass_strong};
-    border-color: {accent_border};
+QComboBox#SpeedPill:hover,
+QComboBox#CompactSpeed:hover {{
+    background: {hover};
+    border-color: {border_strong};
+    color: {text_primary};
 }}
-QToolButton#IconChrome:checked {{
+QComboBox#SpeedPill:focus,
+QComboBox#CompactSpeed:focus {{
+    border: 1px solid {accent};
     background: {selection_fill};
-    border-color: {accent_border};
-    color: {accent_pressed};
+    color: {accent};
+}}
+/* Explorer section ▾ / ▸ — must stay 20×20 (never share TopChrome metrics) */
+QToolButton#SectionChevron {{
+    background: transparent;
+    border: none;
+    border-radius: {radius_sm}px;
+    padding: 0;
+    margin: 0;
+    min-width: 20px;
+    max-width: 20px;
+    min-height: 20px;
+    max-height: 20px;
+    color: {text_secondary};
+}}
+QToolButton#SectionChevron:hover {{
+    background: {hover};
+    color: {text_primary};
+}}
+QToolButton#SectionChevron:checked {{
+    background: transparent;
+    color: {text_primary};
+}}
+QToolButton#SectionChevron::menu-indicator {{
+    image: none;
+    width: 0;
+}}
+/* Top-bar text controls only */
+QToolButton#ExplorerSwitch,
+QToolButton#TopChrome {{
+    background: transparent;
+    border: none;
+    border-radius: {radius_md}px;
+    padding: 0 10px;
+    margin: 0;
+    min-height: 32px;
+    max-height: 32px;
+    font-family: {font_family};
+    font-size: {size_sm}px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    color: {text_secondary};
+}}
+QToolButton#ExplorerSwitch:hover,
+QToolButton#TopChrome:hover {{
+    color: {text_primary};
+    background: {hover};
+}}
+QToolButton#ExplorerSwitch:checked,
+QToolButton#TopChrome:checked {{
+    background: {selection_fill};
+    border: none;
+    color: {text_primary};
+}}
+QToolButton#TopChrome::menu-indicator {{
+    image: none;
+    width: 0;
+    height: 0;
 }}

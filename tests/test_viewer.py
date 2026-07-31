@@ -124,13 +124,13 @@ def test_toggles(viewer: SkeletonViewer) -> None:
 
 def test_camera_presets(viewer: SkeletonViewer) -> None:
     viewer.camera.reset(animate=False)
+    assert viewer.camera.state.view_name == "Back"
+
+    viewer.camera.front(animate=False)
     assert viewer.camera.state.view_name == "Front"
 
-    viewer.camera.rotate_left(animate=False)
+    viewer.camera.side(animate=False)
     assert viewer.camera.state.view_name == "Right"
-
-    viewer.camera.rotate_right(animate=False)
-    assert viewer.camera.state.view_name == "Front"
 
     viewer.set_camera_preset(CameraPreset.ORBIT_2)
     viewer.camera.set_preset(CameraPreset.ORBIT_2, animate=False)
@@ -139,7 +139,7 @@ def test_camera_presets(viewer: SkeletonViewer) -> None:
     viewer.reset()
     viewer.camera.reset(animate=False)
     assert viewer.timeline.current_frame == 0
-    assert viewer.camera.state.view_name == "Front"
+    assert viewer.camera.state.view_name == "Back"
 
 
 def test_screenshot(tmp_path: Path, viewer: SkeletonViewer) -> None:

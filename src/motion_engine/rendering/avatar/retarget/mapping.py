@@ -18,7 +18,6 @@ from motion_engine.rendering.avatar.retarget.types import (
     MappingKind,
     MappingProfile,
     UpAxis,
-    Y_UP_RIGHT,
 )
 
 
@@ -92,7 +91,7 @@ def mapping_from_dict(data: dict[str, Any]) -> MappingProfile:
         root_source=str(root.get("source", data.get("root_source", "Pelvis"))),
         root_target=str(root.get("target", data.get("root_target", "pelvis"))),
         source_coords=_coords_from_dict(data.get("source_coords"), AXYX_COORDS),
-        target_coords=_coords_from_dict(data.get("target_coords"), Y_UP_RIGHT),
+        target_coords=_coords_from_dict(data.get("target_coords"), AXYX_COORDS),
         ignore_source=tuple(str(x) for x in (data.get("ignore_source") or [])),
         ignore_target=tuple(str(x) for x in (data.get("ignore_target") or [])),
         joint_limits=tuple(limits),

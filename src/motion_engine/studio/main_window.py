@@ -1,4 +1,4 @@
-﻿"""Main window - explorer | hero viewport | timeline | inspector."""
+"""Main window - explorer | hero viewport | timeline."""
 
 from __future__ import annotations
 
@@ -28,13 +28,11 @@ from motion_engine.studio.icons import icon_app
 from motion_engine.studio.models.playback_model import PlaybackModel, PlaybackState
 from motion_engine.studio.models.session_model import SessionModel
 from motion_engine.studio.models.subject_model import SubjectModel
-from motion_engine.studio.panels.charts_panel import ChartsPanel
-from motion_engine.studio.panels.inspector_panel import InspectorPanel
 from motion_engine.studio.plugins.loader import load_plugins
 from motion_engine.studio.services.export_service import ExportService, ExportServiceError
 from motion_engine.studio.settings import StudioSettings
 from motion_engine.studio.state import ApplicationState
-from motion_engine.studio.theme import DEFAULT_THEME, apply_elevation, build_stylesheet, get_theme
+from motion_engine.studio.theme import DEFAULT_THEME, build_stylesheet, get_theme
 from motion_engine.studio.undo import StudioUndoStack
 from motion_engine.studio.viewport import ViewportSceneBridge
 from motion_engine.studio.widgets.command_bar import CommandBar
@@ -49,7 +47,7 @@ from motion_engine.studio.widgets.welcome_screen import WelcomeScreen
 
 
 class MainWindow(QMainWindow):
-    """Shell: command bar | explorer dock | viewport | inspector | timeline."""
+    """Shell: command bar | explorer dock | viewport | timeline."""
 
     def __init__(self, settings: StudioSettings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -57,6 +55,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("AXYX")
         self.setWindowIcon(icon_app(64))
         self.resize(settings.window_width, settings.window_height)
+        self.menuBar().hide()
         sp = DEFAULT_THEME.spacing
 
         self.commands = CommandRegistry(self)
@@ -66,28 +65,30 @@ class MainWindow(QMainWindow):
         self.scene_bridge = ViewportSceneBridge()
         self._export_service = ExportService()
         self._layout_restored = False
+        self._dataset_open = False
 
         self.command_bar = CommandBar(self.commands)
         self.sidebar = Sidebar()
         self.session_browser = self.sidebar.session_browser
         self.viewer_canvas = ViewerCanvas()
+        self.command_bar.attach_chrome(self.viewer_canvas.toolbar)
+        self.viewer_canvas.sessionReadoutChanged.connect(
+            self.command_bar.set_session_readout
+        )
         self.timeline_dock = TimelineDock()
         self.playback_toolbar = self.timeline_dock
         self.timeline = self.timeline_dock
-        self.inspector = InspectorPanel()
-        self.charts = ChartsPanel()
         self.welcome = WelcomeScreen()
         self.status = StudioStatusBar()
         self.setStatusBar(self.status)
         self._error_banner = ErrorBanner()
         self._sidebar_expanded = True
 
-        apply_elevation(self.timeline_dock, level=1)
-
         stage = QWidget()
+        stage.setObjectName("StageRoot")
         stage_layout = QVBoxLayout(stage)
-        stage_layout.setContentsMargins(sp.sm, sp.sm, sp.sm, sp.sm)
-        stage_layout.setSpacing(sp.sm)
+        stage_layout.setContentsMargins(0, 0, 0, 0)
+        stage_layout.setSpacing(0)
         stage_layout.addWidget(self._error_banner)
         stage_layout.addWidget(self.viewer_canvas, stretch=1)
         stage_layout.addWidget(self.timeline_dock)
@@ -98,49 +99,46 @@ class MainWindow(QMainWindow):
         shell_layout = QVBoxLayout(shell)
         shell_layout.setContentsMargins(0, 0, 0, 0)
         shell_layout.setSpacing(0)
-        shell_layout.addWidget(self.command_bar)
         shell_layout.addWidget(stage, stretch=1)
 
         self._stack = QStackedWidget()
         self._stack.addWidget(self.welcome)
         self._stack.addWidget(shell)
-        self.setCentralWidget(self._stack)
+
+        # Persistent top chrome — stays above welcome and workspace.
+        central = QWidget()
+        central.setObjectName("CentralRoot")
+        central_layout = QVBoxLayout(central)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.setSpacing(0)
+        central_layout.addWidget(self.command_bar)
+        central_layout.addWidget(self._stack, stretch=1)
+        self.setCentralWidget(central)
         self._workspace = shell
+        self.command_bar.set_welcome_mode(True)
 
         self._explorer_dock = QDockWidget("Explorer", self)
         self._explorer_dock.setObjectName("ExplorerDock")
         self._explorer_dock.setAccessibleName("Explorer")
         self._explorer_dock.setWidget(self.sidebar)
-        apply_elevation(self.sidebar, level=1)
+        # No title-bar close/float controls — visibility is only via the Explorer switch.
+        self._explorer_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        title_bar = QWidget(self._explorer_dock)
+        title_bar.setFixedHeight(0)
+        self._explorer_dock.setTitleBarWidget(title_bar)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self._explorer_dock)
-
-        self._inspector_dock = QDockWidget("Inspector", self)
-        self._inspector_dock.setObjectName("InspectorDock")
-        self._inspector_dock.setAccessibleName("Inspector")
-        self._inspector_dock.setWidget(self.inspector)
-        apply_elevation(self.inspector, level=1)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._inspector_dock)
-
-        self._charts_dock = QDockWidget("Charts", self)
-        self._charts_dock.setObjectName("ChartsDock")
-        self._charts_dock.setAccessibleName("Charts")
-        self._charts_dock.setWidget(self.charts)
-        apply_elevation(self.charts, level=1)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._charts_dock)
-        self.tabifyDockWidget(self._inspector_dock, self._charts_dock)
-        self._inspector_dock.raise_()
+        # Hidden until a dataset is opened from the welcome screen.
+        self._explorer_dock.hide()
 
         self._workspace_manager = WorkspaceManager(self)
         self._workspace_manager.register_dock("explorer", self._explorer_dock)
-        self._workspace_manager.register_dock("inspector", self._inspector_dock)
-        self._workspace_manager.register_dock("charts", self._charts_dock)
         self._workspace_manager.set_default_recipe(self._apply_default_dock_layout)
 
         self._overlay = LoadingOverlay(self)
         self.controller = None
         self.scene_bridge.attach_viewer(self.viewer_canvas)
 
-        self.command_bar.sidebarToggleRequested.connect(self.toggle_sidebar)
+        self.command_bar.explorerToggled.connect(self._on_explorer_switch)
         self._connect_state_observers()
         self._connect_event_observers()
         load_plugins(
@@ -156,7 +154,6 @@ class MainWindow(QMainWindow):
         self.state.workspaceChanged.connect(self._on_workspace_state_changed)
         self.state.viewportChanged.connect(self._on_viewport_state_changed)
         self.state.selectionChanged.connect(self._on_selection_state_changed)
-        self.state.inspectorChanged.connect(self._on_inspector_state_changed)
 
         stack = self.undo_stack.qt_stack
         stack.canUndoChanged.connect(self._update_undo_actions)
@@ -196,26 +193,31 @@ class MainWindow(QMainWindow):
             self.setWindowTitle("AXYX")
 
     def _on_view_state_changed(self) -> None:
+        if not self._dataset_open:
+            return
         expanded = self.state.view.sidebar_expanded
-        if self._explorer_dock.isVisible() != expanded:
-            self._explorer_dock.setVisible(expanded)
-            self._sidebar_expanded = expanded
+        if (
+            self._explorer_dock.isVisible() == expanded
+            and self.command_bar.is_explorer_on() == expanded
+        ):
+            return
+        self._apply_explorer_visible(expanded, sync_state=False)
 
     def _on_workspace_state_changed(self) -> None:
+        if not self._dataset_open:
+            self._hide_side_docks()
+            return
         ws = self.state.workspace
-        if self._explorer_dock.isVisible() != ws.explorer_visible:
-            self._explorer_dock.setVisible(ws.explorer_visible)
-        if self._inspector_dock.isVisible() != ws.inspector_visible:
-            self._inspector_dock.setVisible(ws.inspector_visible)
-        if self._charts_dock.isVisible() != ws.charts_visible:
-            self._charts_dock.setVisible(ws.charts_visible)
+        if (
+            self._explorer_dock.isVisible() == ws.explorer_visible
+            and self.command_bar.is_explorer_on() == ws.explorer_visible
+        ):
+            return
+        self._apply_explorer_visible(ws.explorer_visible, sync_state=False)
 
     def _on_viewport_state_changed(self) -> None:
         enabled = self.state.viewport.avatar_enabled
         self.scene_bridge.set_layer_visible("avatar", enabled)
-        summary = self.scene_bridge.summary()
-        if summary.get("session"):
-            self.inspector.set_scene(summary)
         preset = self.state.viewport.camera_preset
         if preset:
             self.status.showMessage(f"Camera: {preset}", 2000)
@@ -227,19 +229,11 @@ class MainWindow(QMainWindow):
         self.status._subject.setText(f"Subject: {subject}")
         self.status._session.setText(f"Session: {session}")
 
-    def _on_inspector_state_changed(self) -> None:
-        snap = self.state.inspector
-        if snap.last_tab:
-            self.status.showMessage(f"Inspector: {snap.last_tab}", 1500)
-
     def _on_session_loaded(self, subject_id: str, session_name: str) -> None:
         self.status.showMessage(f"Loaded session {subject_id}/{session_name}", 5000)
         avatar = self.state.viewport.avatar_enabled
         self.scene_bridge.set_session(subject_id, session_name, avatar_enabled=avatar)
         self.scene_bridge.sync()
-        summary = self.scene_bridge.summary()
-        self.inspector.set_scene(summary)
-        self.state.set_inspector(last_tab="scene", dirty=False)
 
     def _on_error_raised(self, title: str, message: str) -> None:
         show_toast(self, f"{title}: {message}")
@@ -249,9 +243,6 @@ class MainWindow(QMainWindow):
         self.status.showMessage(f"Dataset loaded: {name}", 5000)
 
     def _on_frame_changed(self, frame: int) -> None:
-        charts = getattr(self, "charts", None)
-        if charts is not None and hasattr(charts, "set_playhead"):
-            charts.set_playhead(frame)
         snap = self.state.playback
         if snap.frame_count:
             self.status._frames.setText(f"Frames: {frame}/{snap.frame_count}")
@@ -268,131 +259,86 @@ class MainWindow(QMainWindow):
         if "edit.redo" in self.commands.all_ids():
             self.commands.set_enabled("edit.redo", self.undo_stack.can_redo())
 
-    def _setup_menus(self) -> None:
-        bar = self.menuBar()
-        bar.clear()
-        bar.show()
-        file_menu = bar.addMenu("&File")
-        file_menu.addAction(self.commands.action("file.open"))
-        if "file.export_json" in self.commands.all_ids():
-            file_menu.addAction(self.commands.action("file.export_json"))
-
-        edit_menu = bar.addMenu("&Edit")
-        edit_menu.addAction(self.commands.action("edit.settings"))
-        if "edit.undo" in self.commands.all_ids():
-            edit_menu.addAction(self.commands.action("edit.undo"))
-        if "edit.redo" in self.commands.all_ids():
-            edit_menu.addAction(self.commands.action("edit.redo"))
-
-        view_menu = bar.addMenu("&View")
-        view_menu.addAction(self.commands.action("view.toggle_sidebar"))
-        if "view.command_palette" in self.commands.all_ids():
-            view_menu.addAction(self.commands.action("view.command_palette"))
-        view_menu.addSeparator()
-        if "view.workspace_research" in self.commands.all_ids():
-            view_menu.addAction(self.commands.action("view.workspace_research"))
-        if "view.workspace_focus" in self.commands.all_ids():
-            view_menu.addAction(self.commands.action("view.workspace_focus"))
-        if "view.workspace_review" in self.commands.all_ids():
-            view_menu.addAction(self.commands.action("view.workspace_review"))
-        if "view.workspace_reset" in self.commands.all_ids():
-            view_menu.addAction(self.commands.action("view.workspace_reset"))
-        view_menu.addSeparator()
-        view_menu.addAction(self.commands.action("view.reset_camera"))
-        if "view.toggle_avatar" in self.commands.all_ids():
-            view_menu.addAction(self.commands.action("view.toggle_avatar"))
-        if "view.toggle_charts" in self.commands.all_ids():
-            view_menu.addAction(self.commands.action("view.toggle_charts"))
-        if "view.fullscreen" in self.commands.all_ids():
-            view_menu.addAction(self.commands.action("view.fullscreen"))
-        view_menu.addSeparator()
-        for cam_id in (
-            "view.camera_front",
-            "view.camera_back",
-            "view.camera_left",
-            "view.camera_right",
-        ):
-            if cam_id in self.commands.all_ids():
-                view_menu.addAction(self.commands.action(cam_id))
-
-        playback_menu = bar.addMenu("&Playback")
-        playback_menu.addAction(self.commands.action("playback.play_pause"))
-        playback_menu.addAction(self.commands.action("playback.stop"))
-
-        help_menu = bar.addMenu("&Help")
-        help_menu.addAction(self.commands.action("help.about"))
-        if "plugin.hello" in self.commands.all_ids():
-            help_menu.addAction(self.commands.action("plugin.hello"))
-
     def toggle_sidebar(self) -> None:
-        """Show or hide the explorer dock."""
-        visible = not self._explorer_dock.isVisible()
-        self._explorer_dock.setVisible(visible)
+        """Keyboard / command palette: flip Explorer visibility."""
+        if not self._dataset_open:
+            self.command_bar.set_explorer_visible(False)
+            return
+        self._apply_explorer_visible(not self._explorer_dock.isVisible())
+
+    def _on_explorer_switch(self, visible: bool) -> None:
+        """Command-bar switch already holds the desired on/off state."""
+        if not self._dataset_open:
+            self.command_bar.set_explorer_visible(False)
+            return
+        self._apply_explorer_visible(bool(visible))
+
+    def _apply_explorer_visible(self, visible: bool, *, sync_state: bool = True) -> None:
+        """Show or hide Explorer reliably (re-dock if needed)."""
+        visible = bool(visible) and self._dataset_open
+        if visible:
+            self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self._explorer_dock)
+            self._explorer_dock.show()
+            self._explorer_dock.raise_()
+        else:
+            self._explorer_dock.hide()
         self._sidebar_expanded = visible
-        self.state.set_view(sidebar_expanded=visible)
+        self.command_bar.set_explorer_visible(visible)
+        if sync_state:
+            self.state.set_view(sidebar_expanded=visible)
 
     def _open_command_palette(self) -> None:
         CommandPalette.open_palette(self, self.commands)
 
+    def _hide_side_docks(self) -> None:
+        self._explorer_dock.hide()
+        self.command_bar.set_explorer_visible(False)
+
+    def _show_side_docks_for_workspace(self) -> None:
+        ws = self.state.workspace
+        self._apply_explorer_visible(ws.explorer_visible, sync_state=False)
+        self.state.set_view(sidebar_expanded=ws.explorer_visible)
+
     def _apply_default_dock_layout(self) -> None:
         """Factory dock recipe used by Reset Workspace."""
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self._explorer_dock)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._inspector_dock)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._charts_dock)
-        self.tabifyDockWidget(self._inspector_dock, self._charts_dock)
-        self._explorer_dock.show()
-        self._inspector_dock.show()
-        self._charts_dock.show()
-        self._inspector_dock.raise_()
+        if self._dataset_open:
+            self._apply_explorer_visible(True)
+        else:
+            self._hide_side_docks()
 
-    def _apply_workspace_preset(
-        self,
-        name: str,
-        *,
-        explorer: bool,
-        inspector: bool,
-        charts: bool,
-    ) -> None:
+    def _apply_workspace_preset(self, name: str, *, explorer: bool) -> None:
+        if not self._dataset_open:
+            return
         self._workspace_manager.load_preset(name)
-        self._explorer_dock.setVisible(explorer)
-        self._inspector_dock.setVisible(inspector)
-        self._charts_dock.setVisible(charts)
-        self.state.set_workspace(
-            preset_name=name,
-            explorer_visible=explorer,
-            inspector_visible=inspector,
-            charts_visible=charts,
-        )
+        self._apply_explorer_visible(explorer)
+        self.state.set_workspace(preset_name=name, explorer_visible=explorer)
         self._workspace_manager.save_preset(name)
         self._workspace_manager.save_layout()
 
     def _workspace_research(self) -> None:
-        self._apply_workspace_preset("research", explorer=True, inspector=True, charts=True)
+        self._apply_workspace_preset("research", explorer=True)
 
     def _workspace_focus(self) -> None:
-        self._apply_workspace_preset("focus", explorer=True, inspector=False, charts=False)
+        self._apply_workspace_preset("focus", explorer=True)
 
     def _workspace_review(self) -> None:
-        self._apply_workspace_preset("review", explorer=True, inspector=True, charts=True)
+        self._apply_workspace_preset("review", explorer=True)
 
     def _workspace_reset(self) -> None:
         self._workspace_manager.reset_layout()
-        self.state.set_workspace(
-            preset_name=None,
-            explorer_visible=True,
-            inspector_visible=True,
-            charts_visible=True,
-        )
-
-    def _toggle_charts(self) -> None:
-        visible = not self._charts_dock.isVisible()
-        self._charts_dock.setVisible(visible)
-        self.state.set_workspace(charts_visible=visible)
+        self.state.set_workspace(preset_name=None, explorer_visible=True)
+        if not self._dataset_open:
+            self._hide_side_docks()
 
     def show_welcome(self, visible: bool) -> None:
         self._stack.setCurrentIndex(0 if visible else 1)
-        if not visible:
-            self._explorer_dock.show()
+        self._dataset_open = not visible
+        self.command_bar.set_welcome_mode(visible)
+        if visible:
+            self._hide_side_docks()
+        else:
+            self._show_side_docks_for_workspace()
 
     def attach_controller(self, controller: Any) -> None:
         self.controller = controller
@@ -400,8 +346,8 @@ class MainWindow(QMainWindow):
         controller.events = self.events
         controller.undo_stack = self.undo_stack
         self.welcome.openDatasetRequested.connect(controller.open_default_dataset)
+        self.welcome.datasetDropped.connect(controller.open_dataset)
         self.sidebar.subjectSelected.connect(controller.select_subject)
-        self.sidebar.recentSessionSelected.connect(controller.select_recent)
         self.sidebar.sessionSelected.connect(controller.select_session)
         dock = self.timeline_dock
         dock.playClicked.connect(controller.play)
@@ -436,15 +382,14 @@ class MainWindow(QMainWindow):
             workspace_reset=self._workspace_reset,
             workspace_review=self._workspace_review,
             toggle_avatar=self._toggle_avatar,
+            set_visualization=self.viewer_canvas.set_visualization,
             camera_front=lambda: self._set_camera_preset("front"),
             camera_back=lambda: self._set_camera_preset("back"),
             camera_left=lambda: self._set_camera_preset("left"),
             camera_right=lambda: self._set_camera_preset("right"),
             toggle_fullscreen=self._toggle_fullscreen,
-            toggle_charts=self._toggle_charts,
         )
         self.command_bar.bind_commands(self.commands)
-        self._setup_menus()
 
     def _set_camera_preset(self, preset: str) -> None:
         self.viewer_canvas.set_camera_preset(preset)
@@ -458,12 +403,16 @@ class MainWindow(QMainWindow):
 
     def _toggle_avatar(self) -> None:
         canvas = self.viewer_canvas
-        enabled = not bool(getattr(canvas, "_digital_twin_enabled", False))
-        canvas.set_digital_twin_enabled(enabled)
+        current = getattr(canvas, "_viz_mode", None)
+        if current is not None and getattr(current, "value", "") == "avatar":
+            canvas.set_visualization("stick")
+            enabled = False
+        else:
+            canvas.set_visualization("avatar")
+            enabled = True
         self.scene_bridge.set_layer_visible("avatar", enabled)
         self.state.set_viewport(avatar_enabled=enabled)
         self.state.set_view(avatar_enabled=enabled)
-        self.inspector.set_scene(self.scene_bridge.summary())
 
     def _toggle_play_pause(self) -> None:
         if self.controller is None:
@@ -500,14 +449,59 @@ class MainWindow(QMainWindow):
 
     def show_loading(self, message: str | None) -> None:
         if message:
-            self._overlay.show_message(message)
+            self.welcome.set_opening(True)
+            kind, title, meta = self._loading_context(message)
+            self._overlay.begin(title=title, kind=kind, meta_lines=meta)
         else:
-            self._overlay.hide_overlay()
+            self.welcome.set_opening(False)
+            if not self._overlay.isVisible():
+                return
+            if self._overlay.job_finished:
+                self._overlay.complete_and_hide()
+            else:
+                self._overlay.hide_overlay()
 
     def show_loading_progress(self, value: int) -> None:
         if value <= 0:
             return
         self._overlay.set_progress(value)
+        self.welcome.set_opening_progress(value)
+
+    def _loading_context(
+        self, message: str
+    ) -> tuple[str, str, list[str]]:
+        lower = message.lower()
+        meta: list[str] = []
+        path = None
+        if self.controller is not None:
+            try:
+                path = self.controller.settings.resolved_dataset_path()
+            except Exception:
+                path = None
+        if path is not None:
+            meta.append(path.stem.replace("_", " "))
+            meta.append(path.name)
+
+        if "skeleton" in lower or "building" in lower or "session" in lower:
+            token = message
+            for prefix in ("Building skeleton for ", "Loading session "):
+                if token.startswith(prefix):
+                    token = token[len(prefix) :]
+                    break
+            token = token.rstrip(".")
+            if "/" in token:
+                subject, session = token.split("/", 1)
+                meta = [f"Subject {subject}", f"Session {session}", *meta]
+            return "session", "Preparing Session", meta[:6]
+
+        meta.extend(["37 Markers", "26 Joint Centers"])
+        seen: set[str] = set()
+        clean: list[str] = []
+        for line in meta:
+            if line and line not in seen:
+                seen.add(line)
+                clean.append(line)
+        return "dataset", "Loading Motion Database", clean[:6]
 
     def set_subjects(self, subjects: list[SubjectModel]) -> None:
         self.sidebar.set_subjects(subjects)
@@ -519,7 +513,7 @@ class MainWindow(QMainWindow):
         self.sidebar.clear_sessions()
 
     def set_recent_sessions(self, keys: list[str]) -> None:
-        self.sidebar.set_recent_sessions(keys)
+        """No-op — Recent explorer section removed."""
 
     def set_skeleton_preview(self, skeleton, frame: int) -> None:
         self.viewer_canvas.set_skeleton(skeleton, frame)
@@ -528,19 +522,16 @@ class MainWindow(QMainWindow):
         self.timeline_dock.sync_from_model(model)
 
     def set_inspector_clinical(self, fields: dict) -> None:
-        self.inspector.set_clinical(fields)
+        """No-op — inspector removed; clinical context lives in status."""
 
     def set_inspector_metrics(self, metrics: dict) -> None:
-        self.inspector.set_metrics(metrics)
-        charts = getattr(self, "charts", None)
-        if charts is not None:
-            charts.set_metrics(metrics)
+        """No-op — charts/inspector removed."""
 
     def set_inspector_dataset(self, fields: dict) -> None:
-        self.inspector.set_dataset(fields)
+        """No-op — inspector removed."""
 
     def set_inspector_playback(self, fields: dict) -> None:
-        self.inspector.set_playback(fields)
+        """No-op — inspector removed."""
 
     def update_status(self, snapshot: StatusSnapshot) -> None:
         self.status.update_snapshot(snapshot)
@@ -565,7 +556,11 @@ class MainWindow(QMainWindow):
         if dialog.exec():
             app = QApplication.instance()
             if app is not None:
-                app.setStyleSheet(build_stylesheet(get_theme(self.settings.theme_mode)))
+                theme = get_theme(self.settings.theme_mode)
+                from motion_engine.studio.theme.palette import apply_museum_palette
+
+                apply_museum_palette(app, theme)
+                app.setStyleSheet(build_stylesheet(theme))
 
     def _open_about(self) -> None:
         AboutDialog(self).exec()
@@ -574,6 +569,9 @@ class MainWindow(QMainWindow):
         if not self._layout_restored:
             self._workspace_manager.restore_layout()
             self._layout_restored = True
+            # Layout restore must not reveal docks on the welcome screen.
+            if not self._dataset_open:
+                self._hide_side_docks()
         super().showEvent(event)
 
     def closeEvent(self, event) -> None:  # noqa: N802

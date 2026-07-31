@@ -34,15 +34,22 @@ class MaterialLibrary:
 
     def __init__(self) -> None:
         self._by_name = {k: v.material for k, v in PRESETS.items()}
-        self.bone = self._by_name.get("graphite", self._fallback_bone())
-        # Current studio theme: red glossy joints (accent, not ceramic preset).
+        # Flagship materials follow STUDIO_THEME (violet joints / ink bones).
+        self.bone = PBRMaterial(
+            name="bone_ink",
+            base_color=STUDIO_THEME.bone,
+            metallic=0.05,
+            roughness=0.72,
+            specular=0.12,
+            specular_power=16.0,
+        )
         self.joint = PBRMaterial(
-            name="joint_red",
+            name="joint_glow",
             base_color=STUDIO_THEME.joint,
-            metallic=0.88,
-            roughness=0.12,
-            specular=0.70,
-            specular_power=80.0,
+            metallic=0.0,
+            roughness=1.0,
+            specular=0.0,
+            specular_power=1.0,
         )
         self.floor = self._by_name.get("floor", self._fallback_floor())
 

@@ -13,15 +13,26 @@ from motion_engine.bone_geometry import (
 )
 
 
-def test_profile_is_uniform_for_all_bones() -> None:
-    assert profile_for_bone("LFemur") is profile_for_bone("LHand")
-    assert profile_for_bone("Skull").epiphysis_boost == 0.0
+def test_profile_varies_by_bone_type() -> None:
+    femur = profile_for_bone("LFemur")
+    hand = profile_for_bone("LHand")
+    skull = profile_for_bone("Skull")
+    assert femur.shaft_radius > hand.shaft_radius
+    assert femur.epiphysis_boost > 0.0
+    assert skull.shaft_radius < femur.shaft_radius
+    # Side prefix stripping: L/R share the same profile.
+    assert profile_for_bone("LFemur") is profile_for_bone("RFemur")
+    # Specific rule wins over looser matches.
+    assert profile_for_bone("LPelvisHip").shaft_radius == profile_for_bone(
+        "RPelvisHip"
+    ).shaft_radius
 
 
-def test_epiphysis_is_uniform_shaft() -> None:
+def test_epiphysis_flares_at_ends() -> None:
     profile = profile_for_bone("LFemur")
-    assert radius_at(profile, 0.02) == radius_at(profile, 0.5)
-    assert radius_at(profile, 0.98) == radius_at(profile, 0.5)
+    mid = radius_at(profile, 0.5)
+    assert radius_at(profile, 0.02) > mid
+    assert radius_at(profile, 0.98) > mid
 
 
 def test_unit_template_has_caps_and_faces() -> None:
@@ -54,3 +65,22 @@ def test_merge_bone_meshes_offsets_faces() -> None:
     assert verts.shape[0] == a_pts.shape[0] + b_pts.shape[0]
     assert faces.shape[0] == a_faces.shape[0] + b_faces.shape[0]
     assert faces.max() == verts.shape[0] - 1
+
+
+def test_unknown_bone_falls_back_to_uniform() -> None:
+    unknown = profile_for_bone("MysterySegment")
+    assert unknown.epiphysis_boost == 0.0
+    assert unknown.shaft_radius == 0.55
+    assert unknown.min_radius == 9.0
+
+
+def test_world_radius_respects_category_floors() -> None:
+    femur = profile_for_bone("LFemur")
+    hand = profile_for_bone("LHand")
+    # Small joints still hit the absolute floor (chunky, not wire).
+    assert femur.world_radius(10.0) == 16.0
+    assert hand.world_radius(10.0) == 7.0
+    # Large joints preserve taper hierarchy via ratio.
+    assert femur.world_radius(30.0) == 30.0 * 0.85
+    assert hand.world_radius(30.0) == 30.0 * 0.45
+    assert femur.world_radius(30.0) > hand.world_radius(30.0)

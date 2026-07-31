@@ -5,24 +5,28 @@ center panel so walking skeletons appear in the same application window.
 from __future__ import annotations
 import logging
 import os
-import threading
 import time
 from typing import Any
+
+import numpy as np
 from PySide6.QtCore import QThread, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
-    QHBoxLayout,
-    QLabel,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 from motion_engine.colors import get_theme
-from motion_engine.rendering.runtime._assets import load_army_girl_avatar
 from motion_engine.rendering.runtime.studio_viewport import DigitalTwinViewportBridge
+from motion_engine.rendering.visualization import (
+    AvatarRenderer,
+    BoneRenderer,
+    StickRenderer,
+    VisualizationManager,
+    VisualizationMode,
+)
 from motion_engine.renderer import PyVistaRenderer
 from motion_engine.skeleton import Pose, Skeleton
-from motion_engine.studio.theme import DEFAULT_THEME
 from motion_engine.studio.widgets.error_banner import ErrorBanner
 from motion_engine.studio.widgets.viewport_toolbar import ViewportToolbar
 from motion_engine.viewer import SkeletonViewer
@@ -53,6 +57,9 @@ class _AvatarPrepWorker(QThread):
 
 class ViewerCanvas(QFrame):
     """Center-panel PyVista viewport bound to studio playback."""
+
+    sessionReadoutChanged = Signal(str)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("CenterPanel")
@@ -67,6 +74,7 @@ class ViewerCanvas(QFrame):
         self._init_error: str | None = None
         self._pending_skeleton: Skeleton | None = None
         self._digital_twin_enabled = False
+        self._viz_mode = VisualizationMode.STICK
         self._dt_bridge = DigitalTwinViewportBridge()
         self._prep_worker: _AvatarPrepWorker | None = None
         self._prep_token = 0
@@ -75,10 +83,19 @@ class ViewerCanvas(QFrame):
         self._last_click_t = 0.0
         self._last_camera_tick = time.perf_counter()
         self._camera_obs: list[tuple[Any, str, int]] = []
-        self._hint = QLabel("Select a session")
-        self._hint.setObjectName("MutedLabel")
         self._error = ErrorBanner()
         self.toolbar = ViewportToolbar()
+        self._viz = VisualizationManager(
+            stick=StickRenderer(
+                on_activate=self._activate_stick,
+                on_deactivate=None,
+            ),
+            bones=BoneRenderer(),
+            avatar=AvatarRenderer(
+                on_activate=self._activate_avatar,
+                on_deactivate=self._deactivate_avatar,
+            ),
+        )
         self._wire_toolbar()
         self._host = QWidget(self)
         self._host.setObjectName("ViewportStage")
@@ -88,27 +105,21 @@ class ViewerCanvas(QFrame):
         self._host_layout = QVBoxLayout(self._host)
         self._host_layout.setContentsMargins(0, 0, 0, 0)
         self._host_layout.setSpacing(0)
-        chrome = QWidget()
-        chrome_layout = QVBoxLayout(chrome)
-        chrome_layout.setContentsMargins(0, 0, 0, 0)
-        chrome_layout.setSpacing(DEFAULT_THEME.spacing.xs)
-        row = QWidget()
-        tr = QHBoxLayout(row)
-        tr.setContentsMargins(0, 0, 0, 0)
-        tr.setSpacing(DEFAULT_THEME.spacing.sm)
-        tr.addWidget(self.toolbar, stretch=1)
-        tr.addWidget(self._hint)
-        chrome_layout.addWidget(row)
-        chrome_layout.addWidget(self._error)
+        # No Qt HUD over the OpenGL surface (blanks the canvas on Windows).
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(DEFAULT_THEME.spacing.sm)
-        layout.addWidget(chrome)
+        layout.setSpacing(0)
+        layout.addWidget(self._error)
         layout.addWidget(self._host, stretch=1)
         self._camera_timer = QTimer(self)
         self._camera_timer.setTimerType(Qt.TimerType.PreciseTimer)
         self._camera_timer.setInterval(8)
         self._camera_timer.timeout.connect(self._tick_camera)
+        self._publish_readout("Select a session")
+
+    def _publish_readout(self, text: str) -> None:
+        self.sessionReadoutChanged.emit(text)
+
     def _wire_toolbar(self) -> None:
         self.toolbar.cameraPresetRequested.connect(self.set_camera_preset)
         self.toolbar.resetCameraRequested.connect(self.reset_camera)
@@ -117,9 +128,9 @@ class ViewerCanvas(QFrame):
         self.toolbar.groundToggled.connect(self.set_ground_visible)
         self.toolbar.lightingToggled.connect(self.set_lighting_enabled)
         self.toolbar.fullscreenRequested.connect(self._on_fullscreen)
-        self.toolbar.digitalTwinToggled.connect(self.set_digital_twin_enabled)
-        if hasattr(self.toolbar, "_avatar_btn"):
-            self.toolbar._avatar_btn.setChecked(self._digital_twin_enabled)
+        self.toolbar.visualizationChanged.connect(self.set_visualization)
+        self.toolbar.digitalTwinToggled.connect(self._on_legacy_avatar_toggle)
+        self.toolbar.set_visualization(self._viz_mode.value)
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
         if not _is_offscreen_platform():
@@ -128,21 +139,14 @@ class ViewerCanvas(QFrame):
                 skeleton = self._pending_skeleton
                 self._pending_skeleton = None
                 self.set_skeleton(skeleton, self._frame)
-    def _preload_avatar_assets(self) -> None:
-        def _run() -> None:
-            try:
-                load_army_girl_avatar()
-                logger.info("Army Girl avatar preloaded")
-            except Exception:
-                logger.debug("Avatar preload skipped", exc_info=True)
-        threading.Thread(target=_run, daemon=True, name="avatar-preload").start()
+
     def _ensure_viewport(self) -> bool:
         if self._ready:
             return True
         if self._init_error is not None:
             return False
         if _is_offscreen_platform():
-            self._hint.setText("3D viewport disabled on offscreen Qt platform.")
+            self._publish_readout("3D viewport disabled on offscreen Qt platform.")
             return False
         try:
             from pyvistaqt import QtInteractor
@@ -151,7 +155,12 @@ class ViewerCanvas(QFrame):
             theme = get_theme("studio")
             renderer = PyVistaRenderer(theme=theme)
             renderer.attach_plotter(plotter)
+            # Museum White void + soft floor plane under the walk.
+            plotter.set_background("#FFFFFF", top="#FFFFFF")
             renderer.set_background(theme.background)
+            if hasattr(renderer, "scene"):
+                renderer.scene.show_grid = False
+                renderer.scene.show_ground = True
             self._plotter = plotter
             self._renderer = renderer
             self._viewer = SkeletonViewer(
@@ -160,14 +169,15 @@ class ViewerCanvas(QFrame):
                 backend="pyvista",
                 block=False,
             )
-            self._viewer.body_callback = self._draw_avatar_body
+            self._viewer.body_callback = self._draw_body
+            self._viz.bind(plotter, theme=theme)
+            self._viz.set_mode(VisualizationMode.STICK)
             try:
                 self._install_clinical_camera(plotter)
             except Exception:
                 logger.exception("Clinical camera controls failed")
             self._camera_timer.start()
             self._ready = True
-            self._preload_avatar_assets()
             logger.info("Embedded PyVista viewport ready")
             return True
         except Exception as exc:  # noqa: BLE001
@@ -177,7 +187,7 @@ class ViewerCanvas(QFrame):
                 "Viewport unavailable",
                 f"{exc}. Install pyvista / pyvistaqt in venv311.",
             )
-            self._hint.setText("3D viewport could not start.")
+            self._publish_readout("3D viewport could not start.")
             return False
     def _install_clinical_camera(self, plotter: Any) -> None:
         iren = getattr(plotter, "iren", None)
@@ -266,6 +276,122 @@ class ViewerCanvas(QFrame):
                 self._viewer.update_frame()
             except Exception:
                 logger.debug("Camera tick failed", exc_info=True)
+    def _draw_body(self, pose: Pose) -> None:
+        """Body callback — avatar mesh or anatomical bone transforms."""
+        if self._viz_mode == VisualizationMode.AVATAR:
+            self._draw_avatar_body(pose)
+            return
+        if self._viz_mode == VisualizationMode.BONES:
+            self._viz.render_pose(pose)
+            if self._renderer is None or not self._viz.bones._show_joints:
+                return
+            theme = self._viewer.theme if self._viewer is not None else None
+            joint_rgb = theme.joint if theme is not None else (0.36, 0.29, 0.86)
+            for joint_name, position in pose.joint_positions.items():
+                if not np.all(np.isfinite(position)):
+                    continue
+                self._renderer.draw_sphere(
+                    position,
+                    10.0,
+                    joint_rgb,
+                    name=f"joint:{joint_name}",
+                )
+
+    def _activate_stick(self) -> None:
+        self._digital_twin_enabled = False
+        self._viz.bones.deactivate()
+        if self._renderer is not None:
+            self._renderer.clear_avatar()
+        if self._viewer is not None:
+            self._viewer.show_body = False
+            self._viewer.show_bones = True
+            self._viewer.show_joints = True
+            if self._viewer.skeleton is not None:
+                self._viewer.update_frame(self._frame)
+
+    def _activate_avatar(self) -> None:
+        self._digital_twin_enabled = True
+        self._viz.bones.deactivate()
+        if self._dt_bridge.ready:
+            self._attach_avatar()
+        elif self._skeleton is not None:
+            self._begin_avatar_prep(self._skeleton)
+
+    def _deactivate_avatar(self) -> None:
+        self._digital_twin_enabled = False
+        self._cancel_avatar_prep()
+        self._detach_avatar()
+
+    def _activate_bones(self) -> bool:
+        """Enable anatomical skeleton. Returns False on asset failure."""
+        self._digital_twin_enabled = False
+        self._cancel_avatar_prep()
+        if self._renderer is not None:
+            self._renderer.clear_avatar()
+        self._viz.bones.bind(self._plotter, theme=None)
+        self._viz.bones.activate()
+        if not self._viz.bones.ready:
+            return False
+        if self._viewer is not None:
+            self._viewer.show_body = True
+            self._viewer.show_bones = False
+            self._viewer.show_joints = False
+            if self._viewer.skeleton is not None:
+                self._viewer.update_frame(self._frame)
+        return True
+
+    def set_visualization(self, mode: str | VisualizationMode) -> None:
+        """Switch stick / bones / avatar without resetting camera or playback."""
+        try:
+            target = VisualizationMode.parse(mode)
+        except ValueError:
+            logger.warning("Unknown visualization mode: %s", mode)
+            return
+        if target == self._viz_mode and (
+            target != VisualizationMode.BONES or self._viz.bones.active
+        ):
+            self.toolbar.set_visualization(target.value)
+            return
+
+        # Deactivate current mode's exclusive resources.
+        if self._viz_mode == VisualizationMode.AVATAR:
+            self._deactivate_avatar()
+        elif self._viz_mode == VisualizationMode.BONES:
+            self._viz.bones.deactivate()
+
+        applied = target
+        if target == VisualizationMode.STICK:
+            self._activate_stick()
+        elif target == VisualizationMode.BONES:
+            if not self._activate_bones():
+                self._error.show_error(
+                    "Bone anatomy unavailable",
+                    "Could not install anatomical meshes — using stick figure.",
+                )
+                self._activate_stick()
+                applied = VisualizationMode.STICK
+        elif target == VisualizationMode.AVATAR:
+            if self._skeleton is None:
+                self._error.show_error("Avatar unavailable", "Load a session first.")
+                self._activate_stick()
+                applied = VisualizationMode.STICK
+            else:
+                self._activate_avatar()
+
+        self._viz_mode = applied
+        self._viz._mode = applied  # keep manager in sync
+        self.toolbar.set_visualization(applied.value)
+
+    def _on_legacy_avatar_toggle(self, enabled: bool) -> None:
+        # Ignore echoes from set_visualization → toolbar sync.
+        if enabled and self._viz_mode == VisualizationMode.AVATAR:
+            return
+        if not enabled and self._viz_mode != VisualizationMode.AVATAR:
+            return
+        self.set_visualization(
+            VisualizationMode.AVATAR if enabled else VisualizationMode.STICK
+        )
+
     def _draw_avatar_body(self, pose: Pose) -> None:
         """Same frame tick as stick figure — mesh + head/toe markers."""
         if self._renderer is None or not self._dt_bridge.ready:
@@ -324,7 +450,7 @@ class ViewerCanvas(QFrame):
         self._cancel_avatar_prep()
         self._prep_token += 1
         token = self._prep_token
-        self._hint.setText(
+        self._publish_readout(
             f"{skeleton.subject_id}/{skeleton.session_name} | "
             f"{skeleton.frame_count}f | Avatar loading…"
         )
@@ -340,7 +466,7 @@ class ViewerCanvas(QFrame):
         self._prep_worker = None
         sk = self._skeleton
         if sk is not None:
-            self._hint.setText(
+            self._publish_readout(
                 f"{sk.subject_id}/{sk.session_name} | {sk.frame_count}f"
             )
         if not self._digital_twin_enabled:
@@ -356,13 +482,14 @@ class ViewerCanvas(QFrame):
         self._dt_bridge = bridge  # type: ignore[assignment]
         if sk is not None:
             mode = "bind pose" if self._dt_bridge.use_bind_pose else "retarget"
-            self._hint.setText(
+            avatar_name = self._dt_bridge.avatar_label or "avatar"
+            self._publish_readout(
                 f"{sk.subject_id}/{sk.session_name} | {sk.frame_count}f | "
-                f"Avatar {self._dt_bridge.vertex_count}v ({mode})"
+                f"{avatar_name.title()} {self._dt_bridge.vertex_count}v ({mode})"
             )
         self._error.hide()
         self._attach_avatar()
-        self.reset_camera()
+        # Do not reset camera — visualization switches must preserve framing.
     def set_skeleton(self, skeleton: Skeleton | None, frame: int = 0) -> None:
         """Load a skeleton — same playback path for stick and avatar."""
         same = (
@@ -383,18 +510,18 @@ class ViewerCanvas(QFrame):
         if skeleton is None:
             self._detach_avatar()
             self._dt_bridge.clear()
-            self._hint.setText("Select a session")
+            self._publish_readout("Select a session")
             self._pending_skeleton = None
             self._error.hide()
             return
         if not self.isVisible() or not self._ensure_viewport() or self._viewer is None:
             self._pending_skeleton = skeleton
-            self._hint.setText(f"{skeleton.subject_id}/{skeleton.session_name}")
+            self._publish_readout(f"{skeleton.subject_id}/{skeleton.session_name}")
             return
         self._pending_skeleton = None
         self._dt_bridge.clear()
         self._detach_avatar()
-        self._hint.setText(
+        self._publish_readout(
             f"{skeleton.subject_id}/{skeleton.session_name} | {skeleton.frame_count}f"
         )
         try:
@@ -403,12 +530,14 @@ class ViewerCanvas(QFrame):
             self.set_frame(frame)
             self.reset_camera()
             self._error.hide()
-            if self._digital_twin_enabled:
+            if self._viz_mode == VisualizationMode.AVATAR:
                 self._begin_avatar_prep(skeleton)
+            elif self._viz_mode == VisualizationMode.BONES:
+                self._activate_bones()
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to show skeleton in embedded viewport")
             self._error.show_error("Failed to load skeleton", str(exc))
-            self._hint.setText("Skeleton could not be rendered.")
+            self._publish_readout("Skeleton could not be rendered.")
     def set_frame(self, frame: int) -> None:
         """Seek — stick and avatar share this single code path."""
         self._frame = frame
@@ -419,25 +548,10 @@ class ViewerCanvas(QFrame):
         except Exception:
             logger.debug("Embedded seek failed", exc_info=True)
     def set_digital_twin_enabled(self, enabled: bool) -> None:
-        if self._digital_twin_enabled == enabled:
-            return
-        self._digital_twin_enabled = enabled
-        if not enabled:
-            self._cancel_avatar_prep()
-            self._detach_avatar()
-            return
-        if self._skeleton is None:
-            self._error.show_error("Avatar unavailable", "Load a session first.")
-            self._digital_twin_enabled = False
-            if hasattr(self.toolbar, "_avatar_btn"):
-                self.toolbar._avatar_btn.blockSignals(True)
-                self.toolbar._avatar_btn.setChecked(False)
-                self.toolbar._avatar_btn.blockSignals(False)
-            return
-        if self._dt_bridge.ready:
-            self._attach_avatar()
-        else:
-            self._begin_avatar_prep(self._skeleton)
+        """Backward-compatible avatar toggle → visualization mode."""
+        self.set_visualization(
+            VisualizationMode.AVATAR if enabled else VisualizationMode.STICK
+        )
     def reset_camera(self) -> None:
         if self._viewer is None:
             return

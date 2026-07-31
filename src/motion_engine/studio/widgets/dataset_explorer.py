@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QLabel, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
 import yaml
 
@@ -19,11 +19,9 @@ def _cohort_catalog_path() -> Path:
 
 
 class DatasetExplorer(QWidget):
-    """Clinical cohort tree: Dataset / Healthy (n) / Parkinson's (n) / …
+    """Clinical cohort list: Dataset / Healthy / Parkinson's / …
 
-    Selection styling comes from the app QSS (``#CohortList``). Do not set
-    a local stylesheet or palette - that reintroduces the Windows Fusion
-    green highlight.
+    Selection uses ``currentItemChanged`` so keyboard + click both work.
     """
 
     cohortSelected = Signal(object)  # str | None
@@ -34,18 +32,20 @@ class DatasetExplorer(QWidget):
         self._load_catalog()
 
         layout = QVBoxLayout(self)
-        sp = DEFAULT_THEME.spacing
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(sp.sm)
-        title = QLabel("Dataset")
-        title.setObjectName("SectionLabel")
+        layout.setSpacing(0)
         self._list = QListWidget()
         self._list.setObjectName("CohortList")
         self._list.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self._list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._list.setUniformItemSizes(True)
-        self._list.itemClicked.connect(self._on_click)
-        layout.addWidget(title)
+        self._list.setFrameShape(QListWidget.Shape.NoFrame)
+        self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._list.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self._list.setAutoFillBackground(True)
+        self._list.currentItemChanged.connect(self._on_current)
         layout.addWidget(self._list)
+        _ = DEFAULT_THEME
 
     def _load_catalog(self) -> None:
         path = _cohort_catalog_path()
@@ -58,19 +58,25 @@ class DatasetExplorer(QWidget):
     def set_subjects(self, subjects: list[SubjectModel]) -> None:
         """Rebuild rows with live subject counts."""
         present = {s.subject_id for s in subjects}
+        self._list.blockSignals(True)
         self._list.clear()
         all_item = QListWidgetItem(f"Dataset ({len(subjects)})")
         all_item.setData(Qt.ItemDataRole.UserRole, None)
+        all_item.setSizeHint(QSize(0, 36))
         self._list.addItem(all_item)
         for name, body in self._cohorts.items():
             ids = [str(s) for s in (body or {}).get("subjects") or []]
             count = sum(1 for sid in ids if sid in present)
-            item = QListWidgetItem(f"{name} ({count})")
+            item = QListWidgetItem(f"  {name} ({count})")
             item.setData(Qt.ItemDataRole.UserRole, name)
             item.setToolTip(str((body or {}).get("diagnosis") or name))
+            item.setSizeHint(QSize(0, 36))
             self._list.addItem(item)
         if self._list.count():
             self._list.setCurrentRow(0)
+        self._list.blockSignals(False)
+        if self._list.currentItem() is not None:
+            self._on_current(self._list.currentItem(), None)
 
     def subject_ids_for_cohort(self, cohort: str | None) -> set[str] | None:
         """Return subject IDs for ``cohort``, or ``None`` for the full dataset."""
@@ -79,5 +85,7 @@ class DatasetExplorer(QWidget):
         body = self._cohorts.get(cohort) or {}
         return {str(s) for s in body.get("subjects") or []}
 
-    def _on_click(self, item: QListWidgetItem) -> None:
-        self.cohortSelected.emit(item.data(Qt.ItemDataRole.UserRole))
+    def _on_current(self, current: QListWidgetItem | None, _prev: QListWidgetItem | None) -> None:
+        if current is None:
+            return
+        self.cohortSelected.emit(current.data(Qt.ItemDataRole.UserRole))

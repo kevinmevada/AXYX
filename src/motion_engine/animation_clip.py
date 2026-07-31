@@ -533,6 +533,10 @@ def _assign_aim_rotations(
     parent_of: dict[str, str | None],
 ) -> None:
     """Estimate joint orientations by aiming toward a primary child."""
+    from motion_engine.rendering.avatar.retarget.skeleton_adapter import (
+        PREFERRED_AIM_CHILD,
+    )
+
     world_up = np.array([0.0, 0.0, 1.0], dtype=float)
     for name, xf in transforms.items():
         if not xf.valid or name not in positions:
@@ -542,7 +546,11 @@ def _assign_aim_rotations(
         ]
         if not child_candidates:
             continue
-        child = sorted(child_candidates)[0]
+        preferred = PREFERRED_AIM_CHILD.get(name)
+        if preferred is not None and preferred in positions:
+            child = preferred
+        else:
+            child = sorted(child_candidates)[0]
         direction = positions[child] - positions[name]
         if float(np.linalg.norm(direction)) < 1e-9:
             continue

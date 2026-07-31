@@ -42,7 +42,14 @@ class RetargetFactory:
         cached = self.cache.get_profile(name)
         if cached is not None:
             return cached
-        profile = self.mappings.builtin(name)
+        # Prefer on-disk JSON (self-documenting, editable without code changes).
+        json_path = (
+            Path(__file__).resolve().parents[5] / "config" / "retarget" / f"{name}.json"
+        )
+        if json_path.is_file():
+            profile = self.mappings.from_json(json_path)
+        else:
+            profile = self.mappings.builtin(name)
         self.cache.put_profile(profile)
         return profile
 

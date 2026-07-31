@@ -42,6 +42,27 @@ CLINICAL_HIERARCHY: list[tuple[str, str | None]] = [
     ("RHand", "RWrist"),
 ]
 
+# Aim parent bones at the anatomical child — NOT hierarchy[0].
+# Pelvis→LHip (first child) makes the root track the left hip and absorbs
+# leg swing into the pelvis, leaving the avatar looking nearly static.
+PREFERRED_AIM_CHILD: dict[str, str] = {
+    "Pelvis": "Thorax",
+    "Thorax": "Neck",
+    "Neck": "Head",
+    "LHip": "LKnee",
+    "LKnee": "LAnkle",
+    "LAnkle": "LFoot",
+    "RHip": "RKnee",
+    "RKnee": "RAnkle",
+    "RAnkle": "RFoot",
+    "LShoulder": "LElbow",
+    "LElbow": "LWrist",
+    "LWrist": "LHand",
+    "RShoulder": "RElbow",
+    "RElbow": "RWrist",
+    "RWrist": "RHand",
+}
+
 
 class SkeletonAdapter:
     """Build MotionSkeleton / MotionPose from heterogeneous sources."""
@@ -103,14 +124,23 @@ class SkeletonAdapter:
             p = np.asarray(pos, dtype=np.float64).reshape(3)
             world[name] = (float(p[0]), float(p[1]), float(p[2]))
 
-        # World rotations from bone directions
+        # World rotations from bone directions (preferred anatomical child first)
         world_q: dict[str, Quat] = {}
         for joint in skeleton.joints:
             children = skeleton.children_of(joint.name)
             if joint.name not in world:
                 continue
-            if children and children[0] in world:
-                direction = np.asarray(world[children[0]], dtype=np.float64) - np.asarray(
+            preferred = PREFERRED_AIM_CHILD.get(joint.name)
+            aim_name: str | None = None
+            if preferred is not None and preferred in world:
+                aim_name = preferred
+            elif children:
+                for child_name in children:
+                    if child_name in world:
+                        aim_name = child_name
+                        break
+            if aim_name is not None:
+                direction = np.asarray(world[aim_name], dtype=np.float64) - np.asarray(
                     world[joint.name], dtype=np.float64
                 )
                 world_q[joint.name] = q_from_to(bone_axis, direction)
@@ -260,4 +290,4 @@ class SkeletonAdapter:
         return positions
 
 
-__all__ = ["SkeletonAdapter", "CLINICAL_HIERARCHY"]
+__all__ = ["SkeletonAdapter", "CLINICAL_HIERARCHY", "PREFERRED_AIM_CHILD"]

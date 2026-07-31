@@ -1,0 +1,203 @@
+# Anatomical bone mapping — external config, no hardcoded meshes in Python.
+# Mesh files live under assets/bones/ (auto-installed on first use).
+# Joint names match config/skeleton_definition.yaml.
+#
+# Mesh convention: unit length along +Z (0→1), cross-section in XY.
+# rest_rotation / rest_translation correct authoring orientation before placement.
+
+schema_version: "1.0.0"
+pack_version: "1.0.0"
+default_material: clinical
+default_radial_scale: 18.0
+show_joints: true
+
+bones:
+  LPelvisHip:
+    mesh: pelvis_hip.obj
+    start_joint: Pelvis
+    end_joint: LHip
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  RPelvisHip:
+    mesh: pelvis_hip.obj
+    start_joint: Pelvis
+    end_joint: RHip
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  LFemur:
+    mesh: femur.obj
+    start_joint: LHip
+    end_joint: LKnee
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  RFemur:
+    mesh: femur.obj
+    start_joint: RHip
+    end_joint: RKnee
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  LTibia:
+    mesh: tibia.obj
+    start_joint: LKnee
+    end_joint: LAnkle
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  RTibia:
+    mesh: tibia.obj
+    start_joint: RKnee
+    end_joint: RAnkle
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  LFoot:
+    mesh: foot.obj
+    start_joint: LAnkle
+    end_joint: LFoot
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  RFoot:
+    mesh: foot.obj
+    start_joint: RAnkle
+    end_joint: RFoot
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  Spine:
+    mesh: spine.obj
+    start_joint: Pelvis
+    end_joint: Thorax
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  Cervical:
+    mesh: cervical.obj
+    start_joint: Thorax
+    end_joint: Neck
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  Skull:
+    mesh: skull.obj
+    start_joint: Neck
+    end_joint: Head
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  LClavicle:
+    mesh: clavicle.obj
+    start_joint: Thorax
+    end_joint: LShoulder
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  RClavicle:
+    mesh: clavicle.obj
+    start_joint: Thorax
+    end_joint: RShoulder
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  LHumerus:
+    mesh: humerus.obj
+    start_joint: LShoulder
+    end_joint: LElbow
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  RHumerus:
+    mesh: humerus.obj
+    start_joint: RShoulder
+    end_joint: RElbow
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  LForearm:
+    mesh: forearm.obj
+    start_joint: LElbow
+    end_joint: LWrist
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  RForearm:
+    mesh: forearm.obj
+    start_joint: RElbow
+    end_joint: RWrist
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  LHand:
+    mesh: hand.obj
+    start_joint: LWrist
+    end_joint: LHand
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical
+
+  RHand:
+    mesh: hand.obj
+    start_joint: RWrist
+    end_joint: RHand
+    rest_rotation: [0, 0, 0]
+    rest_translation: [0, 0, 0]
+    scale: 1.0
+    visibility: true
+    material: clinical

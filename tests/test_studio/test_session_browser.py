@@ -23,5 +23,6 @@ def test_session_browser_lists_and_emits() -> None:
     assert browser._list.count() == 2
     selected: list[str] = []
     browser.sessionSelected.connect(selected.append)
-    browser._on_item_clicked(browser._list.item(0))
+    item = browser._list.item(0)
+    browser._list.setCurrentItem(item)
     assert selected[0] in {"WU01", "NW01"}

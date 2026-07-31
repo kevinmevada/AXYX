@@ -9,13 +9,14 @@ import numpy as np
 from motion_engine.rendering.avatar.pose.bind_pose import BindPose
 from motion_engine.rendering.avatar.pose.matrix_utils import decompose_trs
 from motion_engine.rendering.avatar.retarget._quat import q_conjugate, q_mul, q_normalize
+from motion_engine.rendering.avatar.retarget.constants import QUAT_IDENTITY, VEC3_ZERO
+from motion_engine.rendering.avatar.retarget.coordinate_mapper import CoordinateMapper
 from motion_engine.rendering.avatar.retarget.types import (
     BoneMapEntry,
     MotionPose,
     Quat,
     Vec3,
 )
-from motion_engine.rendering.avatar.retarget.constants import QUAT_IDENTITY, VEC3_ZERO
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,13 +44,20 @@ class OffsetTable:
 
 
 class OffsetSolver:
-    """Compute bind offsets that align source rest pose to avatar bind."""
+    """Compute bind offsets that align source rest pose to avatar bind.
+
+    Source rest and bind must be compared in the **same** coordinate space.
+    When ``coords`` is provided, source rest rotations/translations are mapped
+    into target space before the offset is computed.
+    """
 
     def solve(
         self,
         entries: list[BoneMapEntry],
         source_rest: MotionPose,
         bind: BindPose,
+        *,
+        coords: CoordinateMapper | None = None,
     ) -> OffsetTable:
         table = OffsetTable()
         for entry in entries:
@@ -61,13 +69,21 @@ class OffsetSolver:
                     continue
                 bone = bind.find(target)
                 _, bind_q, _ = decompose_trs(bone.local_matrix)
-                bind_q_t = (float(bind_q[0]), float(bind_q[1]), float(bind_q[2]), float(bind_q[3]))
-                # offset aligns source rest into bind: offset * source_rest ≈ bind
-                # offset = bind * source_rest^{-1}
+                bind_q_t = (
+                    float(bind_q[0]),
+                    float(bind_q[1]),
+                    float(bind_q[2]),
+                    float(bind_q[3]),
+                )
+                # Map source rest into target bind space before differencing.
                 src_q = q_normalize(src.rotation_xyzw)
+                st = src.translation
+                if coords is not None:
+                    src_q = coords.map_quat(src_q)
+                    st = coords.map_vector(st)
+                # offset * mapped_source_rest ≈ bind  →  offset = bind * src^{-1}
                 offset_q = q_normalize(q_mul(bind_q_t, q_conjugate(src_q)))
                 bt = bone.translation
-                st = src.translation
                 offset_t = (bt[0] - st[0], bt[1] - st[1], bt[2] - st[2])
                 table.by_target[target] = BoneOffset(
                     target=target,

@@ -68,7 +68,7 @@ class Scene:
     axes: CoordinateAxes = field(default_factory=CoordinateAxes)
     skeleton_node: SkeletonNode = field(default_factory=SkeletonNode)
     lights: list[Light] = field(default_factory=lambda: [Light()])
-    show_grid: bool = True
+    show_grid: bool = False
     show_ground: bool = True
     show_axes: bool = False
     background: ColorRGB = DEFAULT_THEME.background

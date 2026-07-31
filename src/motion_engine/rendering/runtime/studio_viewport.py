@@ -12,12 +12,19 @@ from motion_engine.animation_clip import AnimationClip
 from motion_engine.constants import SESSION_CLASS_CALIBRATION, SESSION_CLASS_CALIBRATION_COPY
 from motion_engine.rendering.avatar.retarget import RetargetFactory, RootMotionMode
 from motion_engine.rendering.avatar.retarget._quat import q_from_to, q_to_matrix
+from motion_engine.rendering.avatar.retarget.bind_pose_validation import (
+    validate_bind_alignment,
+)
 from motion_engine.rendering.avatar.retarget.coordinate_mapper import CoordinateMapper
 from motion_engine.rendering.avatar.retarget.motion_converter import MotionConverter
-from motion_engine.rendering.avatar.retarget.types import AXYX_COORDS, Y_UP_RIGHT
 from motion_engine.rendering.avatar.skinning import SkinningRuntime
 from motion_engine.rendering.avatar.skinning.debug.pose_edit import reset_to_bind
-from motion_engine.rendering.runtime._assets import load_army_girl_avatar
+from motion_engine.rendering.runtime._assets import (
+    kili_available,
+    load_army_girl_avatar,
+    load_kili_avatar,
+)
+from motion_engine.rendering.runtime.types import AvatarKind
 from motion_engine.skeleton import Skeleton
 from motion_engine.utils import classify_session_name
 
@@ -39,8 +46,14 @@ class DigitalTwinViewportBridge:
     factory: RetargetFactory = field(default_factory=RetargetFactory)
     skinning: SkinningRuntime = field(default_factory=SkinningRuntime)
     converter: MotionConverter = field(default_factory=MotionConverter)
+    # Which mesh drives the viewport. AUTO prefers a real Kili FBX on disk
+    # (KILI/kili.fbx) and falls back to Army Girl if none is found. Both
+    # kinds run through the exact same per-frame retarget pipeline below —
+    # there is no animation-clip / walk-cycle path for either.
+    avatar_kind: AvatarKind | str = "auto"
     ready: bool = False
     error: str | None = None
+    avatar_label: str = ""
     vertex_count: int = 0
     triangle_count: int = 0
     frame_count: int = 0
@@ -59,6 +72,24 @@ class DigitalTwinViewportBridge:
     _R_to_clinical: np.ndarray | None = None
     _stage_scale: float = 1.0
     _align_rotation: np.ndarray | None = None
+    bind_report: Any = None
+
+    def _resolve_avatar_kind(self) -> str:
+        """AUTO -> 'kili' if KILI/kili.fbx exists, else 'army_girl'."""
+        kind = self.avatar_kind.value if isinstance(self.avatar_kind, AvatarKind) else str(self.avatar_kind)
+        kind = kind.lower()
+        if kind == "auto":
+            return "kili" if kili_available() else "army_girl"
+        if kind in ("metahuman", "kili"):
+            return "kili"
+        return "army_girl"
+
+    def _load_mesh_for_kind(self, kind: str) -> tuple[Any, Any, Any, Any, str]:
+        if kind == "kili":
+            skel, bind, mesh, skin = load_kili_avatar()
+            return skel, bind, mesh, skin, "matlab_clinical_to_metahuman"
+        skel, bind, mesh, skin = load_army_girl_avatar()
+        return skel, bind, mesh, skin, "matlab_clinical_to_army_girl"
 
     def prepare(
         self,
@@ -66,7 +97,12 @@ class DigitalTwinViewportBridge:
         *,
         progress: ProgressCallback | None = None,
     ) -> bool:
-        """Load army girl + retarget pipeline for this clinical skeleton."""
+        """Load the avatar mesh + retarget pipeline for this clinical skeleton.
+
+        Same pipeline for every avatar kind: real per-frame mocap joint
+        positions -> RetargetEngine -> skinning. No procedural or
+        FBX-embedded animation is ever played.
+        """
         report = progress or _noop_progress
         self.ready = False
         self.error = None
@@ -75,34 +111,62 @@ class DigitalTwinViewportBridge:
             if skeleton.n_frames <= 0:
                 raise ValueError("Skeleton has no frames")
 
+            resolved_kind = self._resolve_avatar_kind()
             key = (skeleton.subject_id, skeleton.session_name, skeleton.n_frames)
-            if self._session_key != key:
+            if self._session_key != key or self.avatar_label != resolved_kind:
                 self._session_key = key
                 self._clip = None
 
             self._skeleton = skeleton
             self.frame_count = int(skeleton.n_frames)
-            self.use_bind_pose = self._is_calibration_session(skeleton)
+            # Never freeze multi-frame trials to the FBX bind pose — that yields a
+            # standing mannequin while the stick/bones walk. Single-frame
+            # calibration still retargets (frame 0 ≡ standing).
+            self.use_bind_pose = False
+            if self._is_calibration_session(skeleton) and self.frame_count <= 1:
+                self.use_bind_pose = True
             self._source_skel = self.factory.clinical_skeleton()
-            self._R_to_clinical = CoordinateMapper(
-                AXYX_COORDS, Y_UP_RIGHT
-            ).rotation_matrix.T
 
             report(15, "Building motion clip…")
             if self._clip is None:
                 self._clip = AnimationClip.from_skeleton(skeleton)
 
-            report(35, "Loading avatar mesh…")
-            _skel, bind, mesh, skin = load_army_girl_avatar()
+            report(35, f"Loading {resolved_kind} mesh…")
+            try:
+                _skel, bind, mesh, skin, profile_name = self._load_mesh_for_kind(resolved_kind)
+            except Exception:
+                if resolved_kind != "army_girl":
+                    logger.warning(
+                        "Kili avatar unavailable, falling back to Army Girl", exc_info=True
+                    )
+                    resolved_kind = "army_girl"
+                    _skel, bind, mesh, skin, profile_name = self._load_mesh_for_kind(resolved_kind)
+                else:
+                    raise
+            self.avatar_label = resolved_kind
 
             report(55, "Building rest pose…")
             rest_motion = self._motion_from_skeleton(0)
 
             report(70, "Setting up retarget…")
+            # Bust stale Y-up profile cache after coordinate-system fix.
+            try:
+                self.factory.cache.invalidate_profile(profile_name)
+            except Exception:
+                pass
             engine = self.factory.engine(
-                "matlab_clinical_to_army_girl",
+                profile_name,
                 root_mode=RootMotionMode.IN_PLACE,
             )
+            # Absolute Euler limits clamp bind+delta space and crush limb swing.
+            # Viewport matching stick motion must not soft-clamp toward identity.
+            from motion_engine.rendering.avatar.retarget.constraint_solver import (
+                ConstraintSolver,
+            )
+
+            engine.constraints = ConstraintSolver(())
+            # Staging axis fix derived from profile — never hardcode Y-up.
+            self._R_to_clinical = self._staging_axis_matrix(engine)
             ctx = engine.prepare(
                 self._source_skel,
                 _skel,
@@ -126,6 +190,18 @@ class DigitalTwinViewportBridge:
                 ]
             ).ravel()
 
+            report(85, "Validating bind alignment…")
+            mapped = {
+                t
+                for e in ctx.active_entries
+                for t in e.targets
+                if t in ctx.target_names
+            }
+            rest_anim = engine.retarget(rest_motion, ctx, session=session)
+            self.bind_report = validate_bind_alignment(
+                rest_anim, bind, mapped_targets=mapped
+            )
+
             report(90, "Verifying skinning…")
             probe = self.deform(0)
             if probe is None:
@@ -133,13 +209,18 @@ class DigitalTwinViewportBridge:
             self._calibrate_stage()
 
             self.ready = True
-            report(100, "Avatar ready")
+            report(100, f"{resolved_kind.title()} ready")
             logger.info(
-                "Digital twin ready: verts=%d frames=%d scale=%.2f bind=%s %s/%s",
+                "Digital twin ready: avatar=%s verts=%d frames=%d scale=%.2f "
+                "bind=%s coords=%s→%s max_err=%.1f° %s/%s",
+                self.avatar_label,
                 self.vertex_count,
                 self.frame_count,
                 self._stage_scale,
                 self.use_bind_pose,
+                engine.profile.source_coords.name,
+                engine.profile.target_coords.name,
+                getattr(self.bind_report, "max_error_deg", -1.0),
                 skeleton.subject_id,
                 skeleton.session_name,
             )
@@ -148,6 +229,19 @@ class DigitalTwinViewportBridge:
             self.error = str(exc)
             logger.exception("Digital twin viewport prepare failed")
             return False
+
+    @staticmethod
+    def _staging_axis_matrix(engine: Any) -> np.ndarray:
+        """Map avatar retarget space → clinical space from the profile.
+
+        When source and target share the same coordinate system (Army Girl
+        Z-up ↔ clinical Z-up), this is identity — no magic 90° corrections.
+        """
+        src = engine.profile.source_coords
+        tgt = engine.profile.target_coords
+        if src.key() == tgt.key():
+            return np.eye(3, dtype=np.float64)
+        return CoordinateMapper(tgt, src).rotation_matrix
 
     @staticmethod
     def _is_calibration_session(skeleton: Skeleton) -> bool:
@@ -208,7 +302,7 @@ class DigitalTwinViewportBridge:
         return np.asarray(pose.find(name).global_matrix[:3, 3], dtype=np.float64)
 
     def _axis_fix(self, rel: np.ndarray) -> np.ndarray:
-        """Map avatar Y-up vectors into clinical Z-up frame."""
+        """Map avatar-space vectors into clinical space (identity when Z-up↔Z-up)."""
         if self._R_to_clinical is None:
             return rel
         if rel.ndim == 1:
@@ -327,9 +421,16 @@ class DigitalTwinViewportBridge:
 
     def frame_package(self, frame: int) -> tuple[np.ndarray | None, dict[str, np.ndarray]]:
         """Mesh + landmarks in the same clinical space as the stick figure."""
-        defm = self.deform(frame)
         pose = self._retarget_pose(frame)
-        if defm is None or pose is None:
+        if pose is None:
+            return None, {}
+        defm = self.skinning.deform(
+            self._mesh,
+            self._skin,
+            bind_pose=self._bind,
+            pose=pose,
+        )
+        if defm is None:
             return None, {}
         clinical_pelvis = self._clinical_pelvis(frame)
         avatar_pelvis = self._avatar_pelvis(pose)
@@ -369,6 +470,7 @@ class DigitalTwinViewportBridge:
     def clear(self) -> None:
         self.ready = False
         self.error = None
+        self.avatar_label = ""
         self.use_bind_pose = False
         self.frame_count = 0
         self._skeleton = None
@@ -385,6 +487,7 @@ class DigitalTwinViewportBridge:
         self._R_to_clinical = None
         self._stage_scale = 1.0
         self._align_rotation = None
+        self.bind_report = None
 
 
 __all__ = ["DigitalTwinViewportBridge", "ProgressCallback", "LANDMARK_BONES"]

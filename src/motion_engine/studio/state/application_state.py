@@ -25,18 +25,11 @@ class SelectionState:
 class WorkspaceState:
     preset_name: str | None = None
     explorer_visible: bool = True
-    inspector_visible: bool = True
-    charts_visible: bool = True
 
 @dataclass
 class ViewportState:
     avatar_enabled: bool = True
     camera_preset: str | None = None
-
-@dataclass
-class InspectorState:
-    last_tab: str | None = None
-    dirty: bool = False
 
 @dataclass
 class PlaybackSnapshot:
@@ -61,7 +54,6 @@ class ApplicationState(QObject):
     selectionChanged = Signal()
     workspaceChanged = Signal()
     viewportChanged = Signal()
-    inspectorChanged = Signal()
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -69,7 +61,6 @@ class ApplicationState(QObject):
         self.selection = SelectionState()
         self.workspace = WorkspaceState()
         self.viewport = ViewportState()
-        self.inspector = InspectorState()
         self.playback = PlaybackSnapshot()
         self.view = ViewState()
 
@@ -119,17 +110,11 @@ class ApplicationState(QObject):
         *,
         preset_name: str | None | object = _UNSET,
         explorer_visible: bool | None = None,
-        inspector_visible: bool | None = None,
-        charts_visible: bool | None = None,
     ) -> None:
         if preset_name is not _UNSET:
             self.workspace.preset_name = preset_name  # type: ignore[assignment]
         if explorer_visible is not None:
             self.workspace.explorer_visible = explorer_visible
-        if inspector_visible is not None:
-            self.workspace.inspector_visible = inspector_visible
-        if charts_visible is not None:
-            self.workspace.charts_visible = charts_visible
         self.workspaceChanged.emit()
         self.changed.emit()
 
@@ -144,19 +129,6 @@ class ApplicationState(QObject):
         if camera_preset is not None:
             self.viewport.camera_preset = camera_preset
         self.viewportChanged.emit()
-        self.changed.emit()
-
-    def set_inspector(
-        self,
-        *,
-        last_tab: str | None = None,
-        dirty: bool | None = None,
-    ) -> None:
-        if last_tab is not None:
-            self.inspector.last_tab = last_tab
-        if dirty is not None:
-            self.inspector.dirty = dirty
-        self.inspectorChanged.emit()
         self.changed.emit()
 
     def set_playback(

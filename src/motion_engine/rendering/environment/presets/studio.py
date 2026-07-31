@@ -1,4 +1,4 @@
-"""Studio environment preset — light photography look."""
+"""Studio environment preset — Museum White empty field."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ from motion_engine.rendering.environment.presets.base import EnvironmentPreset
 
 PRESET = EnvironmentPreset(
     name="studio",
-    background=(0.96, 0.96, 0.97),
-    floor_color=(0.957, 0.957, 0.965),
-    edge_fade=True,
-    show_grid=True,
-    hdri_enabled=True,
+    background=(1.0, 1.0, 1.0),
+    floor_color=(1.0, 1.0, 1.0),
+    edge_fade=False,
+    show_grid=False,
+    hdri_enabled=False,
     fog_enabled=False,
     infinity_floor=False,
     vignette=False,
-    notes="Light photography studio",
+    notes="Museum White — empty white field",
 )

@@ -42,8 +42,9 @@ def test_render_graph_default_order() -> None:
 
 def test_material_library_presets() -> None:
     lib = MaterialLibrary()
-    assert lib.bone.metallic >= 0.9
-    assert lib.joint.metallic >= 0.8
+    assert lib.bone.metallic < 0.2
+    assert lib.joint.metallic == 0.0
+    assert lib.joint.roughness >= 0.95
     assert lib.floor.roughness > 0.5
 
 

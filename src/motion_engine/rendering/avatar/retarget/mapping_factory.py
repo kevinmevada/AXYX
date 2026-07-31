@@ -97,7 +97,7 @@ def _pairs_to_profile(
         root_source="Pelvis",
         root_target="pelvis",
         source_coords=AXYX_COORDS,
-        target_coords=Y_UP_RIGHT,
+        target_coords=AXYX_COORDS,
         ignore_target=("ik_foot_root", "ik_hand_root", "root"),
         chains={
             "left_leg": ["Pelvis", "LHip", "LKnee", "LAnkle"],
@@ -106,7 +106,7 @@ def _pairs_to_profile(
             "right_arm": ["Thorax", "RShoulder", "RElbow", "RWrist"],
             "torso": ["Pelvis", "Thorax", "Neck", "Head"],
         },
-        metadata={"builtin": True},
+        metadata={"builtin": True, "target_up": "z"},
     )
 
 

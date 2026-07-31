@@ -4,16 +4,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QPoint
+from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation
 from PySide6.QtWidgets import QGraphicsOpacityEffect, QWidget
 
 
 @dataclass(frozen=True, slots=True)
 class StudioMotion:
-    instant: int = 80
-    fast: int = 150
-    base: int = 220
-    slow: int = 340
+    """Micro-interaction timings — noticed as polish, never as lag."""
+
+    instant: int = 100
+    fast: int = 140
+    base: int = 180
+    slow: int = 240
+    camera: int = 300
+
+
+def ease_out() -> QEasingCurve:
+    return QEasingCurve(QEasingCurve.Type.OutCubic)
 
 
 def _opacity_effect(widget: QWidget) -> QGraphicsOpacityEffect:
@@ -39,7 +46,7 @@ def fade_in(
     anim.setDuration(duration if duration is not None else motion.base)
     anim.setStartValue(start)
     anim.setEndValue(end)
-    anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+    anim.setEasingCurve(ease_out())
     return anim
 
 
@@ -75,5 +82,5 @@ def slide(
     anim.setDuration(duration if duration is not None else motion.base)
     anim.setStartValue(start)
     anim.setEndValue(end)
-    anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+    anim.setEasingCurve(ease_out())
     return anim

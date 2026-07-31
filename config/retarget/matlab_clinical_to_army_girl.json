@@ -12,21 +12,24 @@
     "units_per_meter": 1.0
   },
   "target_coords": {
-    "name": "y_up",
-    "up": "y",
-    "forward": "z",
+    "name": "axyx",
+    "up": "z",
+    "forward": "x",
     "handedness": "right",
-    "units_per_meter": 1.0
+    "units_per_meter": 1.0,
+    "_comment": "Army Girl FBX bind pose is Z-up (Unreal-style), same as clinical AXYX — do NOT use Y-up"
   },
   "bones": [
     { "source": "Pelvis", "targets": ["pelvis"], "copy_translation": true },
     { "source": "LHip", "targets": ["thigh_l"] },
     { "source": "LKnee", "targets": ["calf_l"] },
     { "source": "LAnkle", "targets": ["foot_l"] },
+    { "source": "LFoot", "targets": ["ball_l"], "optional": true },
     { "source": "RHip", "targets": ["thigh_r"] },
     { "source": "RKnee", "targets": ["calf_r"] },
     { "source": "RAnkle", "targets": ["foot_r"] },
-    { "source": "Thorax", "targets": ["spine_01", "spine_02"], "kind": "one_to_many", "optional": true },
+    { "source": "RFoot", "targets": ["ball_r"], "optional": true },
+    { "source": "Thorax", "targets": ["spine_01", "spine_02", "spine_03"], "kind": "one_to_many", "optional": true },
     { "source": "Neck", "targets": ["neck_01"], "optional": true },
     { "source": "Head", "targets": ["head"], "optional": true },
     { "source": "LShoulder", "targets": ["upperarm_l"], "optional": true },
@@ -36,10 +39,41 @@
     { "source": "RElbow", "targets": ["lowerarm_r"], "optional": true },
     { "source": "RWrist", "targets": ["hand_r"], "optional": true }
   ],
+  "joint_limits": [
+    {
+      "bone": "calf_l",
+      "min_xyz": [-3.0, -0.35, -0.35],
+      "max_xyz": [0.15, 0.35, 0.35],
+      "preferred_axis": [1.0, 0.0, 0.0]
+    },
+    {
+      "bone": "calf_r",
+      "min_xyz": [-3.0, -0.35, -0.35],
+      "max_xyz": [0.15, 0.35, 0.35],
+      "preferred_axis": [1.0, 0.0, 0.0]
+    },
+    {
+      "bone": "lowerarm_l",
+      "min_xyz": [-0.2, -0.4, -2.8],
+      "max_xyz": [0.2, 0.4, 0.15],
+      "preferred_axis": [0.0, 0.0, 1.0]
+    },
+    {
+      "bone": "lowerarm_r",
+      "min_xyz": [-0.2, -0.4, -2.8],
+      "max_xyz": [0.2, 0.4, 0.15],
+      "preferred_axis": [0.0, 0.0, 1.0]
+    }
+  ],
   "chains": {
     "left_leg": ["Pelvis", "LHip", "LKnee", "LAnkle"],
     "right_leg": ["Pelvis", "RHip", "RKnee", "RAnkle"],
+    "left_arm": ["Thorax", "LShoulder", "LElbow", "LWrist"],
+    "right_arm": ["Thorax", "RShoulder", "RElbow", "RWrist"],
     "torso": ["Pelvis", "Thorax", "Neck", "Head"]
   },
-  "metadata": { "description": "Clinical Plug-in Gait → Army Girl / Unreal-style bones" }
+  "metadata": {
+    "description": "Clinical Plug-in Gait → Army Girl (Z-up ↔ Z-up, no axis remap)",
+    "coordinate_note": "FBX bind AABB stands on +Z; matching clinical AXYX eliminates bind offsets >100°"
+  }
 }

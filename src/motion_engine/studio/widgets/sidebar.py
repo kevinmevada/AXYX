@@ -1,21 +1,20 @@
-"""Unified left navigation - VS Code Explorer style."""
+"""Left rail — compact explorer with reliable list selection."""
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QListWidget,
-    QListWidgetItem,
     QSizePolicy,
-    QSpacerItem,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
+from motion_engine.studio.icons import icon_chevron_down, icon_chevron_right
 from motion_engine.studio.models.session_model import SessionModel
 from motion_engine.studio.models.subject_model import SubjectModel
 from motion_engine.studio.theme import DEFAULT_THEME
@@ -25,7 +24,7 @@ from motion_engine.studio.widgets.subject_browser import SubjectBrowser
 
 
 class _NavSection(QWidget):
-    """Collapsible flex section that releases all space when closed."""
+    """Collapsible section — closed = header only, no ghost gap."""
 
     expandedChanged = Signal()
 
@@ -38,42 +37,65 @@ class _NavSection(QWidget):
         flex: bool = True,
     ) -> None:
         super().__init__()
-        # Non-flex sections (e.g. Recent) keep their natural height when open.
         self._flex = flex
-        sp = DEFAULT_THEME.spacing
+        self._title = title
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
-        self._layout.setSpacing(0)
+        self._layout.setSpacing(8)
 
         self._header = QWidget()
-        self._header.setSizePolicy(
-            QSizePolicy.Policy.Preferred,
-            QSizePolicy.Policy.Fixed,
-        )
+        self._header.setFixedHeight(28)
         row = QHBoxLayout(self._header)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(sp.xs)
+        row.setSpacing(8)
+
         self._btn = QToolButton()
-        self._btn.setObjectName("IconChrome")
+        self._btn.setObjectName("SectionChevron")
         self._btn.setCheckable(True)
         self._btn.setChecked(expanded)
-        self._btn.setText("▾" if expanded else "▸")
+        self._btn.setFixedSize(20, 20)
+        self._btn.setIconSize(QSize(16, 16))
+        self._btn.setAutoRaise(True)
+        self._btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn.setAccessibleName(f"Toggle {title} section")
         self._btn.toggled.connect(self._toggle)
-        label = QLabel(title)
-        label.setObjectName("SectionLabel")
+        self._set_chevron(expanded)
         row.addWidget(self._btn)
+
+        label = QLabel(title.upper())
+        label.setObjectName("SectionLabel")
+        label.setToolTip(title)
+        font = label.font()
+        font.setPointSize(DEFAULT_THEME.typography.size_xs)
+        font.setWeight(QFont.Weight.DemiBold)
+        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.2)
+        label.setFont(font)
+        label.setStyleSheet(f"color: {DEFAULT_THEME.colors.text_disabled};")
+        # Clicking the label also toggles — larger hit target.
+        label.mousePressEvent = lambda _e: self._btn.toggle()  # type: ignore[method-assign]
         row.addWidget(label, stretch=1)
 
         self._body = body
-        self._body.setVisible(expanded)
+        self._body.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding if flex else QSizePolicy.Policy.Preferred,
+        )
         self._layout.addWidget(self._header)
-        self._layout.addWidget(self._body, stretch=1 if expanded else 0)
+        self._layout.addWidget(self._body, stretch=1)
         self._apply_size_policy(expanded)
 
+    def _set_chevron(self, expanded: bool) -> None:
+        self._btn.setText("")
+        self._btn.setIcon(
+            icon_chevron_down(16, active=expanded)
+            if expanded
+            else icon_chevron_right(16, active=False)
+        )
+        self._btn.setToolTip(f"{'Collapse' if expanded else 'Expand'} {self._title}")
+
     def _toggle(self, on: bool) -> None:
-        self._body.setVisible(on)
-        self._btn.setText("▾" if on else "▸")
-        self._layout.setStretch(1, 1 if on else 0)
+        self._set_chevron(on)
         self._apply_size_policy(on)
         self.expandedChanged.emit()
 
@@ -84,126 +106,124 @@ class _NavSection(QWidget):
     def is_flex(self) -> bool:
         return self._flex
 
-    def _header_height(self) -> int:
-        return max(self._header.sizeHint().height(), self._header.minimumSizeHint().height(), 28)
-
     def _apply_size_policy(self, expanded: bool) -> None:
         if expanded:
+            self._body.show()
+            self._body.setMinimumHeight(0)
             self._body.setMaximumHeight(16_777_215)
+            self._layout.setStretch(1, 1)
+            # Clear any prior setFixedHeight from the collapsed state.
             self.setMinimumHeight(0)
-            if self._flex:
-                self.setMaximumHeight(16_777_215)
-                self.setSizePolicy(
-                    QSizePolicy.Policy.Preferred,
-                    QSizePolicy.Policy.Expanding,
-                )
-            else:
-                # Natural height only - never stretch a bounded body.
-                h = self._header_height() + self._body.sizeHint().height()
-                self.setSizePolicy(
-                    QSizePolicy.Policy.Preferred,
-                    QSizePolicy.Policy.Fixed,
-                )
-                self.setMaximumHeight(h)
-        else:
-            # Collapse hard to header-only - no leftover gap.
-            h = self._header_height()
+            self.setMaximumHeight(16_777_215)
             self.setSizePolicy(
                 QSizePolicy.Policy.Preferred,
-                QSizePolicy.Policy.Fixed,
+                QSizePolicy.Policy.Expanding if self._flex else QSizePolicy.Policy.Maximum,
             )
-            self.setMinimumHeight(h)
-            self.setMaximumHeight(h)
+        else:
+            self._body.hide()
+            self._body.setMinimumHeight(0)
             self._body.setMaximumHeight(0)
+            self._layout.setStretch(1, 0)
+            self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+            self.setFixedHeight(self._header.height())
         self.updateGeometry()
 
 
 class Sidebar(QFrame):
-    """Single unified nav: Dataset · Subjects · Sessions · Recent."""
+    """Explorer rail: Dataset · Subjects · Sessions."""
 
     subjectSelected = Signal(str)
     sessionSelected = Signal(str)
-    recentSessionSelected = Signal(str)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setObjectName("Sidebar")
-        self.setMinimumWidth(240)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAutoFillBackground(True)
+        pal = self.palette()
+        bg = QColor(DEFAULT_THEME.colors.background)
+        pal.setColor(QPalette.ColorRole.Window, bg)
+        pal.setColor(QPalette.ColorRole.Base, QColor(DEFAULT_THEME.colors.surface))
+        pal.setColor(QPalette.ColorRole.Text, QColor(DEFAULT_THEME.colors.text_primary))
+        self.setPalette(pal)
+        self.setMinimumWidth(280)
         self.setMaximumWidth(340)
-        sp = DEFAULT_THEME.spacing
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(sp.md, sp.md, sp.md, sp.md)
-        layout.setSpacing(sp.xs)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(0)
         self._layout = layout
         self._sections: list[tuple[_NavSection, int]] = []
-
-        nav_title = QLabel("Explorer")
-        nav_title.setObjectName("BrandTitle")
-        nav_title.setSizePolicy(
-            QSizePolicy.Policy.Preferred,
-            QSizePolicy.Policy.Fixed,
-        )
-        layout.addWidget(nav_title)
+        self._dividers: list[QWidget] = []
 
         self.dataset_explorer = DatasetExplorer()
         self.dataset_explorer.cohortSelected.connect(self._on_cohort)
-        self._add_section("Dataset", self.dataset_explorer, weight=1)
+        self._add_section("Dataset", self.dataset_explorer, weight=2)
+
+        self._add_divider()
 
         self.subject_browser = SubjectBrowser()
         self.subject_browser.subjectSelected.connect(self.subjectSelected.emit)
         self._add_section("Subjects", self.subject_browser, weight=3)
 
+        self._add_divider()
+
         self.session_browser = SessionBrowser()
         self.session_browser.sessionSelected.connect(self.sessionSelected.emit)
         self._add_section("Sessions", self.session_browser, weight=3)
 
-        recent_wrap = QWidget()
-        recent_layout = QVBoxLayout(recent_wrap)
-        recent_layout.setContentsMargins(0, 0, 0, 0)
-        recent_layout.setSpacing(0)
-        self._recent = QListWidget()
-        self._recent.setObjectName("RecentList")
-        self._recent.setMaximumHeight(100)
-        self._recent.itemClicked.connect(self._on_recent)
-        recent_layout.addWidget(self._recent)
-        self._add_section("Recent", recent_wrap, weight=0, flex=False)
+        # Absorbs leftover height when every section is collapsed so headers
+        # pack tightly at the top instead of spreading across the rail.
+        layout.addStretch(1)
+        self._tail_stretch_index = layout.count() - 1
 
-        # Absorbs leftover height so collapsed headers stay pinned to the top.
-        layout.addItem(
-            QSpacerItem(
-                0,
-                0,
-                QSizePolicy.Policy.Minimum,
-                QSizePolicy.Policy.Expanding,
-            )
-        )
-        self._spacer_index = layout.count() - 1
         self._rebalance_sections()
 
+    def _add_divider(self) -> None:
+        line = QFrame()
+        line.setObjectName("Divider")
+        line.setFixedHeight(1)
+        wrap = QWidget()
+        wrap.setFixedHeight(17)
+        wrap_layout = QVBoxLayout(wrap)
+        wrap_layout.setContentsMargins(0, 8, 0, 8)
+        wrap_layout.setSpacing(0)
+        wrap_layout.addWidget(line)
+        self._dividers.append(wrap)
+        self._layout.addWidget(wrap)
+
     def _add_section(
-        self, title: str, body: QWidget, *, weight: int, flex: bool = True
+        self,
+        title: str,
+        body: QWidget,
+        *,
+        weight: int,
+        flex: bool = True,
     ) -> None:
         section = _NavSection(title, body, flex=flex)
         section.expandedChanged.connect(self._rebalance_sections)
         self._sections.append((section, weight))
-        self._layout.addWidget(section)
+        self._layout.addWidget(section, stretch=weight)
 
     def _rebalance_sections(self) -> None:
-        """Open flex sections grow; fixed/closed headers stay packed at the top."""
-        any_flex_open = False
-        for index, (section, weight) in enumerate(self._sections, start=1):
+        any_expanded = False
+        for section, weight in self._sections:
             expanded = section.is_expanded()
-            grows = expanded and section.is_flex
-            any_flex_open |= grows
-            self._layout.setStretch(index, weight if grows else 0)
+            any_expanded = any_expanded or expanded
             section._apply_size_policy(expanded)
-        # Spacer soaks up free space whenever no growing section can take it
-        # (all closed, or only fixed-height sections like Recent are open).
-        self._layout.setStretch(self._spacer_index, 0 if any_flex_open else 1)
+            idx = self._layout.indexOf(section)
+            if idx >= 0:
+                self._layout.setStretch(idx, weight if expanded else 0)
+        # Only fight for space when a section is open; otherwise the tail
+        # stretch claims everything so collapsed headers stay stacked.
+        self._layout.setStretch(self._tail_stretch_index, 0 if any_expanded else 1)
+        for i, divider in enumerate(self._dividers):
+            above = self._sections[i][0]
+            below = self._sections[i + 1][0]
+            # Keep a hairline between open neighbors; hide when either side
+            # is collapsed so closed headers sit flush.
+            divider.setVisible(above.is_expanded() and below.is_expanded())
         self.updateGeometry()
-
     def set_subjects(self, subjects: list[SubjectModel]) -> None:
         self.dataset_explorer.set_subjects(subjects)
         self.subject_browser.set_subjects(subjects)
@@ -214,17 +234,8 @@ class Sidebar(QFrame):
     def clear_sessions(self) -> None:
         self.session_browser.clear_sessions()
 
-    def set_recent_sessions(self, keys: list[str]) -> None:
-        self._recent.clear()
-        for key in keys:
-            self._recent.addItem(QListWidgetItem(key))
-
     def _on_cohort(self, cohort: object) -> None:
         ids = self.dataset_explorer.subject_ids_for_cohort(
             cohort if isinstance(cohort, str) else None
         )
         self.subject_browser.set_cohort_filter(ids)
-
-    def _on_recent(self, item: QListWidgetItem) -> None:
-        if item.text():
-            self.recentSessionSelected.emit(item.text())

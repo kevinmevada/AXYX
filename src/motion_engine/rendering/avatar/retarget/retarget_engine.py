@@ -33,6 +33,7 @@ from motion_engine.rendering.avatar.retarget.types import (
     RootMotionMode,
     Vec3,
 )
+from motion_engine.rendering.avatar.retarget.twist_propagation import propagate_twists
 from motion_engine.rendering.avatar.retarget.validation import RetargetValidator
 from motion_engine.rendering.avatar.skeleton.avatar_skeleton import AvatarSkeleton
 
@@ -92,7 +93,7 @@ class RetargetEngine:
                 for j in source.joints
             }
         )
-        offset_table = self.offsets.solve(active, rest, bind)
+        offset_table = self.offsets.solve(active, rest, bind, coords=self.coords)
         # proportions from rest or a synthetic height if empty
         prop = self.proportions.solve(rest, bind, self.profile)
         coverage = self.bones.coverage(source, target_names)
@@ -227,7 +228,10 @@ class RetargetEngine:
                             float(mapped_t[2]),
                         )
 
-        # Constraints
+        # Twist bones: inherit axial component of primary limb bones.
+        locals_q = propagate_twists(locals_q, bind)
+
+        # Constraints (hinge knees/elbows when profile defines limits)
         cresult = self.constraints.apply(locals_q, hard_fail=self.hard_constraints)
         locals_q = cresult.rotations
 

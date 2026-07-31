@@ -1,9 +1,9 @@
-"""Compact Apple Music / Final Cut-style timeline dock."""
+"""Premium transport — elevated play/pause, hairline scrub, pill speed."""
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QKeySequence
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QColor, QKeySequence, QPalette
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -15,19 +15,18 @@ from PySide6.QtWidgets import (
 )
 
 from motion_engine.studio.icons import (
-    ICON_SM,
+    ICON_MD,
     icon_next,
-    icon_pause,
-    icon_play,
     icon_prev,
     icon_stop,
 )
 from motion_engine.studio.models.playback_model import PlaybackModel, PlaybackState
 from motion_engine.studio.theme import DEFAULT_THEME
+from motion_engine.studio.widgets.play_pause_button import PlayPauseButton
 
 
 class TimelineDock(QWidget):
-    """Bottom dock: compact transport + scrubber + timecode."""
+    """Bottom transport: timecode · controls · rounded scrub track."""
 
     playClicked = Signal()
     pauseClicked = Signal()
@@ -43,40 +42,59 @@ class TimelineDock(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("TimelineDock")
-        self.setFixedHeight(72)
-        sp = DEFAULT_THEME.spacing
+        self.setFixedHeight(104)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAutoFillBackground(True)
+        bg = QColor(DEFAULT_THEME.colors.background)
+        pal = self.palette()
+        pal.setColor(QPalette.ColorRole.Window, bg)
+        pal.setColor(QPalette.ColorRole.Base, bg)
+        self.setPalette(pal)
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(sp.md, sp.sm, sp.md, sp.sm)
-        root.setSpacing(sp.xs)
+        root.setContentsMargins(32, 12, 32, 16)
+        root.setSpacing(12)
 
         transport = QHBoxLayout()
-        transport.setSpacing(sp.xs)
+        transport.setSpacing(0)
+        transport.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
-        self._frame = QLabel("0 / 0")
+        self._frame = QLabel("FRAME 000/0  ·  00:00.00")
         self._frame.setObjectName("FrameLabel")
-        self._timecode = QLabel("00:00.00")
+        self._frame.setFixedHeight(52)
+        self._frame.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self._timecode = QLabel("")
         self._timecode.setObjectName("TimecodeLabel")
+        self._timecode.hide()
 
-        self._play = self._btn("Play (Space)", icon_play(ICON_SM), "")
-        self._play.setAccessibleName("Play")
-        self._play.clicked.connect(self._on_play_clicked)
-        self._pause = self._btn("Pause", icon_pause(ICON_SM), "")
-        self._pause.setAccessibleName("Pause")
-        self._pause.setCheckable(True)
-        self._pause.clicked.connect(self.pauseClicked.emit)
-        self._stop = self._btn("Stop (Home)", icon_stop(ICON_SM), "Home")
-        self._stop.setAccessibleName("Stop")
-        self._stop.clicked.connect(self.stopClicked.emit)
-        self._prev = self._btn("Previous (←)", icon_prev(ICON_SM), "Left")
+        cluster = QHBoxLayout()
+        cluster.setContentsMargins(0, 0, 0, 0)
+        cluster.setSpacing(16)
+        cluster.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        self._prev = self._bare("Previous (←)", icon_prev(ICON_MD), "Left")
         self._prev.setAccessibleName("Previous frame")
         self._prev.clicked.connect(self.previousClicked.emit)
-        self._next = self._btn("Next (→)", icon_next(ICON_SM), "Right")
+
+        self._play_pause = PlayPauseButton()
+        self._play_pause.toggledPlayback.connect(self._on_play_pause)
+
+        self._stop = self._bare("Stop (Home)", icon_stop(ICON_MD, danger=True), "Home")
+        self._stop.setObjectName("StopTransportButton")
+        self._stop.setAccessibleName("Stop")
+        self._stop.clicked.connect(self.stopClicked.emit)
+
+        self._next = self._bare("Next (→)", icon_next(ICON_MD), "Right")
         self._next.setAccessibleName("Next frame")
         self._next.clicked.connect(self.nextClicked.emit)
 
+        for w in (self._prev, self._play_pause, self._stop, self._next):
+            cluster.addWidget(w, 0, Qt.AlignmentFlag.AlignVCenter)
+
         self._speed = QComboBox()
-        self._speed.setObjectName("CompactSpeed")
+        self._speed.setObjectName("SpeedPill")
         for label, value in (
             ("0.25×", 0.25),
             ("0.5×", 0.5),
@@ -87,7 +105,8 @@ class TimelineDock(QWidget):
         ):
             self._speed.addItem(label, value)
         self._speed.setCurrentIndex(2)
-        self._speed.setFixedSize(72, 30)
+        self._speed.setFixedHeight(32)
+        self._speed.setMinimumWidth(72)
         self._speed.setToolTip("Playback speed")
         self._speed.currentIndexChanged.connect(self._on_speed_changed)
 
@@ -96,21 +115,22 @@ class TimelineDock(QWidget):
         self._loop.setText("Loop")
         self._loop.setCheckable(True)
         self._loop.setChecked(True)
-        self._loop.setFixedHeight(28)
+        self._loop.setFixedHeight(32)
+        self._loop.setCursor(Qt.CursorShape.PointingHandCursor)
         self._loop.setToolTip("Loop playback")
         self._loop.toggled.connect(self.loopChanged.emit)
 
-        transport.addWidget(self._frame)
-        transport.addWidget(self._timecode)
+        transport.addWidget(self._frame, 0, Qt.AlignmentFlag.AlignVCenter)
         transport.addStretch(1)
-        for w in (self._prev, self._play, self._pause, self._stop, self._next):
-            transport.addWidget(w)
+        transport.addLayout(cluster)
         transport.addStretch(1)
-        transport.addWidget(self._speed)
-        transport.addWidget(self._loop)
+        transport.addWidget(self._speed, 0, Qt.AlignmentFlag.AlignVCenter)
+        transport.addSpacing(8)
+        transport.addWidget(self._loop, 0, Qt.AlignmentFlag.AlignVCenter)
 
         scrub = QHBoxLayout()
-        scrub.setSpacing(sp.sm)
+        scrub.setContentsMargins(0, 0, 0, 0)
+        scrub.setSpacing(0)
         self._preview = QLabel("")
         self._preview.setObjectName("EyebrowLabel")
         self._preview.hide()
@@ -119,7 +139,9 @@ class TimelineDock(QWidget):
         self._slider.setAccessibleName("Timeline scrubber")
         self._slider.setMinimum(0)
         self._slider.setMaximum(0)
-        self._slider.setFixedHeight(28)
+        self._slider.setFixedHeight(20)
+        self._slider.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self._slider.setCursor(Qt.CursorShape.PointingHandCursor)
         self._slider.setToolTip("Scrub timeline")
         self._slider.sliderPressed.connect(self._on_press)
         self._slider.sliderMoved.connect(self._on_moved)
@@ -133,26 +155,30 @@ class TimelineDock(QWidget):
 
         self._updating = False
         self._scrubbing = False
+        self._playing = False
+        self._fps = 100.0
         self.playback_toolbar = self
         self.timeline = self
 
-    def _on_play_clicked(self) -> None:
-        self.playClicked.emit()
+    def _on_play_pause(self) -> None:
+        self.playPauseToggled.emit()
 
     def toggle_play_pause(self) -> None:
-        """Emit play/pause toggle (wired from command shortcut)."""
         self.playPauseToggled.emit()
 
     @staticmethod
-    def _btn(tip: str, icon, shortcut: str) -> QToolButton:
-        from PySide6.QtCore import QSize
-
+    def _bare(tip: str, icon, shortcut: str) -> QToolButton:
         btn = QToolButton()
         btn.setObjectName("TransportButton")
         btn.setIcon(icon)
         btn.setToolTip(tip)
-        btn.setFixedSize(28, 28)
-        btn.setIconSize(QSize(16, 16))
+        btn.setFixedSize(48, 48)
+        btn.setIconSize(QSize(20, 20))
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setAutoRaise(True)
+        btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        btn.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         if shortcut:
             btn.setShortcut(QKeySequence(shortcut))
         return btn
@@ -161,12 +187,13 @@ class TimelineDock(QWidget):
         if self._scrubbing:
             return
         self._updating = True
+        self._fps = float(model.fps) if model.fps else 100.0
         maximum = max(0, model.frame_count - 1)
         self._slider.setMaximum(maximum)
         self._slider.setValue(min(model.current_frame, maximum))
-        self._frame.setText(f"{model.current_frame} / {maximum}")
-        self._timecode.setText(
-            f"{_fmt(model.current_time_sec)} / {_fmt(model.duration_sec)}"
+        total = max(model.frame_count, 0)
+        self._frame.setText(
+            f"FRAME {model.current_frame:03d}/{total}  ·  {_fmt(model.current_time_sec)}"
         )
         self._speed.blockSignals(True)
         self._loop.blockSignals(True)
@@ -178,9 +205,9 @@ class TimelineDock(QWidget):
         self._speed.blockSignals(False)
         self._loop.blockSignals(False)
         playing = model.state == PlaybackState.PLAYING
-        self._play.setEnabled(not playing and model.frame_count > 0)
-        self._pause.setEnabled(playing)
-        self._pause.setChecked(playing)
+        self._playing = playing
+        self._play_pause.set_playing(playing)
+        self._play_pause.set_playback_enabled(model.frame_count > 0)
         self._updating = False
 
     def _on_speed_changed(self, index: int) -> None:
@@ -191,11 +218,11 @@ class TimelineDock(QWidget):
     def _on_press(self) -> None:
         self._scrubbing = True
         self._preview.show()
-        self._preview.setText(f"→ {self._slider.value()}")
+        self._update_frame_label(self._slider.value())
 
     def _on_moved(self, value: int) -> None:
+        self._update_frame_label(value)
         self._preview.setText(f"→ {value}")
-        self._frame.setText(f"{value} / {self._slider.maximum()}")
 
     def _on_release(self) -> None:
         self._scrubbing = False
@@ -203,9 +230,17 @@ class TimelineDock(QWidget):
         self.frameSeeked.emit(int(self._slider.value()))
 
     def _on_slider(self, value: int) -> None:
-        if self._updating or self._scrubbing:
+        if self._updating:
+            return
+        if self._scrubbing:
+            self._update_frame_label(value)
             return
         self.frameSeeked.emit(int(value))
+
+    def _update_frame_label(self, frame: int) -> None:
+        total = max(self._slider.maximum() + 1, 0)
+        t = frame / self._fps if self._fps > 0 else 0.0
+        self._frame.setText(f"FRAME {frame:03d}/{total}  ·  {_fmt(t)}")
 
 
 def _fmt(seconds: float) -> str:

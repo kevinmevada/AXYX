@@ -20,6 +20,7 @@ def register_builtin_commands(
     open_about: Callable[[], None],
     export_animation: Callable[[], None] | None = None,
     toggle_avatar: Callable[[], None] | None = None,
+    set_visualization: Callable[[str], None] | None = None,
     undo: Callable[[], None] | None = None,
     redo: Callable[[], None] | None = None,
     open_command_palette: Callable[[], None] | None = None,
@@ -32,9 +33,8 @@ def register_builtin_commands(
     camera_left: Callable[[], None] | None = None,
     camera_right: Callable[[], None] | None = None,
     toggle_fullscreen: Callable[[], None] | None = None,
-    toggle_charts: Callable[[], None] | None = None,
 ) -> None:
-    """Register standard File / Edit / View / Playback / Help commands."""
+    """Register standard studio commands (palette / shortcuts / command bar)."""
     registry.register(
         Command(
             id="file.open",
@@ -122,9 +122,34 @@ def register_builtin_commands(
             Command(
                 id="view.toggle_avatar",
                 text="Toggle Avatar",
-                tooltip="Show or hide avatar mesh",
+                tooltip="Switch between stick figure and human avatar",
             ),
             toggle_avatar,
+        )
+    if set_visualization is not None:
+        registry.register(
+            Command(
+                id="view.visualization_stick",
+                text="Visualization: Stick Figure",
+                tooltip="Clinical stick figure",
+            ),
+            lambda: set_visualization("stick"),
+        )
+        registry.register(
+            Command(
+                id="view.visualization_bones",
+                text="Visualization: Bone Anatomy",
+                tooltip="Anatomical bone meshes",
+            ),
+            lambda: set_visualization("bones"),
+        )
+        registry.register(
+            Command(
+                id="view.visualization_avatar",
+                text="Visualization: Human Avatar",
+                tooltip="Skinned digital twin",
+            ),
+            lambda: set_visualization("avatar"),
         )
     if open_command_palette is not None:
         registry.register(
@@ -141,7 +166,7 @@ def register_builtin_commands(
             Command(
                 id="view.workspace_research",
                 text="Workspace: Research",
-                tooltip="Explorer + Inspector visible",
+                tooltip="Explorer visible",
             ),
             workspace_research,
         )
@@ -150,7 +175,7 @@ def register_builtin_commands(
             Command(
                 id="view.workspace_focus",
                 text="Workspace: Focus",
-                tooltip="Hide inspector for focused review",
+                tooltip="Explorer for focused review",
             ),
             workspace_focus,
         )
@@ -168,7 +193,7 @@ def register_builtin_commands(
             Command(
                 id="view.workspace_review",
                 text="Workspace: Review",
-                tooltip="Explorer + Inspector + Charts for session review",
+                tooltip="Explorer for session review",
             ),
             workspace_review,
         )
@@ -201,13 +226,4 @@ def register_builtin_commands(
                 tooltip="Toggle viewport fullscreen",
             ),
             toggle_fullscreen,
-        )
-    if toggle_charts is not None:
-        registry.register(
-            Command(
-                id="view.toggle_charts",
-                text="Toggle Charts",
-                tooltip="Show or hide the Charts dock",
-            ),
-            toggle_charts,
         )

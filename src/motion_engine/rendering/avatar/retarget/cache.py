@@ -31,6 +31,14 @@ class RetargetCache:
     def put_profile(self, profile: MappingProfile) -> None:
         self.profiles[profile.name] = profile
 
+    def invalidate_profile(self, name: str) -> None:
+        self.profiles.pop(name, None)
+        # Drop contexts that may have been prepared with the old profile.
+        stale = [k for k in self.contexts if isinstance(k, tuple) and k and k[0] == name]
+        for k in stale:
+            self.contexts.pop(k, None)
+            self.offsets.pop(k, None)
+
     def get_context(self, key: Hashable) -> RetargetContext | None:
         if key in self.contexts:
             self.hits += 1

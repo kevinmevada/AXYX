@@ -47,79 +47,86 @@ class Theme:
     fog: ColorRGB
 
 
-# Light photography studio — pale floor, graphite bones, red joint accents.
-_FLOOR: ColorRGB = _hex("F4F4F6")
-_FLOOR_WARM: ColorRGB = _hex("E6E7EA")
-_WALL: ColorRGB = _hex("EEEEEF")
-_GRAPHITE: ColorRGB = _hex("3A3D42")
-_GRAPHITE_HI: ColorRGB = _hex("55585E")
-_JOINT_RED: ColorRGB = _hex("E8443A")
-_GRID: ColorRGB = _hex("C8CAD0")
-_GRID_MINOR: ColorRGB = _hex("D8DAE0")
-_ACCENT: ColorRGB = _hex("4F8CFF")
-_INK: ColorRGB = _hex("2C2E32")
+# AXYX Museum White — Graphite Ink bones; glow joints (purple body, red head).
+_WHITE: ColorRGB = _hex("FFFFFF")
+_GRAPHITE: ColorRGB = _hex("1C1E1C")
+_GRAPHITE_SOFT: ColorRGB = _hex("6E6E6B")
+# Glow joint regions — purple body, red head (viewport only).
+JOINT_HEAD: ColorRGB = _hex("FF6B63")
+JOINT_BODY: ColorRGB = _hex("C4A8FF")
+
+
+def joint_region_color(joint_name: str, default: ColorRGB | None = None) -> ColorRGB:
+    """Display color by region — head red, everything else purple."""
+    key = joint_name.lower()
+    if "head" in key or "skull" in key:
+        return JOINT_HEAD
+    return default if default is not None else JOINT_BODY
+
 
 STUDIO_THEME: Final[Theme] = Theme(
     name="studio",
-    background=_WALL,
-    background_top=_hex("F7F7F8"),
-    ground=_FLOOR,
-    grid=_GRID,
-    grid_minor=_GRID_MINOR,
+    background=_WHITE,
+    background_top=_WHITE,
+    ground=_WHITE,
+    grid=_GRAPHITE_SOFT,
+    grid_minor=_GRAPHITE_SOFT,
     bone=_GRAPHITE,
-    bone_highlight=_GRAPHITE_HI,
-    joint=_JOINT_RED,
-    joint_highlight=_hex("FF6B5E"),
-    label=_INK,
-    axis_x=_JOINT_RED,
-    axis_y=_hex("8A8E96"),
-    axis_z=_ACCENT,
-    hud_text=_INK,
-    selected=_ACCENT,
-    floor_accent=_FLOOR_WARM,
-    fog=_WALL,
+    bone_highlight=_GRAPHITE_SOFT,
+    joint=JOINT_BODY,
+    joint_highlight=_hex("DCCBFF"),
+    label=_GRAPHITE,
+    axis_x=JOINT_BODY,
+    axis_y=_GRAPHITE_SOFT,
+    axis_z=_GRAPHITE_SOFT,
+    hud_text=_GRAPHITE_SOFT,
+    selected=_hex("DCCBFF"),
+    floor_accent=_WHITE,
+    fog=_WHITE,
 )
 
+# Legacy Flagship dark void (opt-in via get_theme("dark")).
 DARK_THEME: Final[Theme] = Theme(
     name="dark",
-    background=(0.08, 0.09, 0.11),
-    background_top=(0.04, 0.05, 0.06),
-    ground=(0.16, 0.17, 0.20),
-    grid=(0.28, 0.30, 0.34),
-    grid_minor=(0.20, 0.22, 0.25),
-    joint=(0.55, 0.13, 0.22),
-    bone=(0.75, 0.80, 0.88),
-    joint_highlight=(0.72, 0.19, 0.30),
-    bone_highlight=(0.90, 0.92, 0.95),
-    label=(0.90, 0.92, 0.95),
-    axis_x=(0.90, 0.25, 0.25),
-    axis_y=(0.30, 0.85, 0.35),
-    axis_z=(0.30, 0.55, 0.95),
-    hud_text=(0.92, 0.93, 0.95),
-    selected=(0.31, 0.55, 1.00),
-    floor_accent=(0.20, 0.21, 0.24),
-    fog=(0.08, 0.09, 0.11),
+    background=_hex("0B090D"),
+    background_top=_hex("161311"),
+    ground=_hex("0B090D"),
+    grid=_hex("A29D94"),
+    grid_minor=_hex("78766E"),
+    bone=_hex("D0AC68"),
+    bone_highlight=_hex("DEC28C"),
+    joint=_hex("F4E8D0"),
+    joint_highlight=_hex("F8F0E4"),
+    label=_hex("F1EEE8"),
+    axis_x=_hex("D0AC68"),
+    axis_y=_hex("A29D94"),
+    axis_z=_hex("78623A"),
+    hud_text=_hex("F1EEE8"),
+    selected=_hex("DEC28C"),
+    floor_accent=_hex("1A1714"),
+    fog=_hex("0B090D"),
 )
 
+# Legacy light photography look (opt-in via get_theme("light")).
 LIGHT_THEME: Final[Theme] = Theme(
     name="light",
-    background=(0.88, 0.89, 0.91),
-    background_top=(0.96, 0.96, 0.97),
-    ground=(0.82, 0.83, 0.85),
-    grid=(0.65, 0.67, 0.70),
-    grid_minor=(0.74, 0.76, 0.78),
-    joint=(0.55, 0.13, 0.22),
-    bone=(0.30, 0.34, 0.40),
-    joint_highlight=(0.72, 0.19, 0.30),
-    bone_highlight=(0.10, 0.45, 0.90),
-    label=(0.12, 0.12, 0.14),
-    axis_x=(0.85, 0.15, 0.15),
-    axis_y=(0.15, 0.65, 0.25),
-    axis_z=(0.15, 0.35, 0.85),
-    hud_text=(0.12, 0.12, 0.14),
-    selected=(0.31, 0.55, 1.00),
-    floor_accent=(0.76, 0.77, 0.79),
-    fog=(0.90, 0.91, 0.92),
+    background=_hex("EEEEEF"),
+    background_top=_hex("F7F7F8"),
+    ground=_hex("F4F4F6"),
+    grid=_hex("C8CAD0"),
+    grid_minor=_hex("D8DAE0"),
+    bone=_hex("3A3D42"),
+    bone_highlight=_hex("55585E"),
+    joint=_hex("E8443A"),
+    joint_highlight=_hex("FF6B5E"),
+    label=_hex("2C2E32"),
+    axis_x=_hex("E8443A"),
+    axis_y=_hex("8A8E96"),
+    axis_z=_hex("4F8CFF"),
+    hud_text=_hex("2C2E32"),
+    selected=_hex("4F8CFF"),
+    floor_accent=_hex("E6E7EA"),
+    fog=_hex("EEEEEF"),
 )
 
 CLINICAL_THEME: Final[Theme] = Theme(

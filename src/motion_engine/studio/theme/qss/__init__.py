@@ -79,11 +79,18 @@ def token_map(theme: StudioTheme) -> dict[str, str]:
         "gradient_top",
         "gradient_mid",
         "gradient_bottom",
+        "glow_gold",
+        "glow_violet",
+        "glow_blue",
+        "divider",
+        "panel_top_sheen",
+        "hover",
     )
     tokens: dict[str, str] = {name: getattr(c, name) for name in color_fields}
     tokens.update(
         {
             "font_family": t.family,
+            "font_family_display": t.family_display,
             "font_family_mono": t.family_mono,
             "size_xs": str(t.size_xs),
             "size_sm": str(t.size_sm),
@@ -99,6 +106,7 @@ def token_map(theme: StudioTheme) -> dict[str, str]:
             "radius_md": str(r.md),
             "radius_lg": str(r.lg),
             "radius_xl": str(r.xl),
+            "radius_cta": str(r.cta),
             "radius_pill": str(r.pill),
             "space_xxs": str(s.xxs),
             "space_xs": str(s.xs),

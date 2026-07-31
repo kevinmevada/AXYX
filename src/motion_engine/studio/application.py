@@ -19,7 +19,8 @@ from motion_engine.studio.services.renderer_service import (
 )
 from motion_engine.studio.settings import StudioSettings
 from motion_engine.studio.logging_config import configure_studio_logging
-from motion_engine.studio.theme import build_stylesheet, get_theme, register_studio_fonts
+from motion_engine.studio.theme import build_stylesheet, get_theme, register_studio_fonts, apply_app_font
+from motion_engine.studio.theme.palette import apply_museum_palette
 logger = logging.getLogger(__name__)
 
 class StudioApplication:
@@ -49,8 +50,11 @@ class StudioApplication:
         self.app.setOrganizationName("AXYX")
         self.app.setStyle("Fusion")
         register_studio_fonts()
+        apply_app_font(self.app)
+        theme = get_theme(self.settings.theme_mode)
+        apply_museum_palette(self.app, theme)
         configure_studio_logging()
-        self.app.setStyleSheet(build_stylesheet(get_theme(self.settings.theme_mode)))
+        self.app.setStyleSheet(build_stylesheet(theme))
         self.motion_service = MotionService()
         self.project_service = ProjectService(self.motion_service, self.settings)
         self.playback_service = PlaybackService()

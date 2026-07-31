@@ -20,7 +20,7 @@ def qapp():
     return app
 
 
-def test_subject_browser_filters_and_emits(qapp, qtbot=None) -> None:
+def test_subject_browser_lists_and_emits(qapp) -> None:
     browser = SubjectBrowser()
     subjects = [
         SubjectModel("S1", session_count=2),
@@ -32,8 +32,8 @@ def test_subject_browser_filters_and_emits(qapp, qtbot=None) -> None:
 
     selected: list[str] = []
     browser.subjectSelected.connect(selected.append)
-    browser._search.setText("S2")
-    assert browser._list.count() == 1
-    browser._list.item(0).setSelected(True)
-    browser._on_item_clicked(browser._list.item(0))
+    browser.select_subject("S2")
     assert selected == ["S2"]
+
+    browser.set_cohort_filter({"S1", "S10"})
+    assert browser._list.count() == 2

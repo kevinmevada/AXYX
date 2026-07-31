@@ -1,16 +1,30 @@
 """About dialog."""
+
 from __future__ import annotations
+
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout
+
+from motion_engine.studio.theme.wordmark import (
+    WORDMARK_WEIGHT_UI,
+    apply_wordmark_label,
+)
+
 
 class AboutDialog(QDialog):
     """About AXYX."""
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("About AXYX")
         self.setModal(True)
         layout = QVBoxLayout(self)
-        title = QLabel("AXYX")
-        title.setObjectName("HeroTitle")
+        title = QLabel()
+        apply_wordmark_label(
+            title,
+            pixel_size=22,
+            weight=WORDMARK_WEIGHT_UI,
+            object_name="HeroTitle",
+        )
         body = QLabel(
             "AXYX research platform for clinical gait reconstruction,\n"
             "scientific visualization, and Motion Engine analysis.\n"

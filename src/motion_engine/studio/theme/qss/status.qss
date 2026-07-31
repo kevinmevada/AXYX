@@ -1,34 +1,53 @@
 QStatusBar {{
-    background: {glass_strong};
-    border-top: 1px solid {glass_edge};
-    color: {text_primary};
-    font-size: {size_xs}px;
-    padding: 2px {space_sm}px;
+    background: {background};
+    border-top: 1px solid {border};
+    color: {text_muted};
+    font-family: {font_family};
+    font-size: {size_sm}px;
+    min-height: 36px;
+    max-height: 36px;
+    padding: 0 {space_lg}px;
 }}
 QStatusBar::item {{ border: none; }}
 QLabel#StatusStat {{
-    color: {text_primary};
+    color: {text_secondary};
+    font-size: {size_sm}px;
+    font-weight: 500;
+    padding: 0 16px 0 0;
+    font-family: {font_family};
+    letter-spacing: 0.2px;
+}}
+QLabel#StatusVersion {{
+    color: {text_muted};
     font-size: {size_xs}px;
-    padding: 0 {space_sm}px;
+    font-weight: 500;
+    padding: 0 16px 0 0;
+    font-family: {font_family};
+}}
+QLabel#StatusStatSecondary {{
+    color: {text_muted};
+    font-size: {size_xs}px;
+    font-weight: 400;
+    padding: 0 12px 0 0;
     font-family: {font_family_mono};
 }}
 QLabel#StatePill {{
     font-size: {size_xs}px;
-    font-weight: 700;
-    letter-spacing: {tracking_wide};
+    font-weight: 600;
+    letter-spacing: 0.8px;
     text-transform: uppercase;
-    padding: 3px {space_sm}px;
+    padding: 4px 10px;
     border-radius: {radius_pill}px;
     background: {surface_sunken};
-    color: {text_secondary};
+    color: {text_muted};
 }}
 QLabel#StatePill[state="playing"] {{
-    background: {success_muted};
-    color: {success};
+    background: {selection_fill};
+    color: {accent};
 }}
 QLabel#StatePill[state="paused"] {{
-    background: {warning_muted};
-    color: {warning};
+    background: {hover};
+    color: {text_secondary};
 }}
 QLabel#StatePill[state="stopped"] {{
     background: {surface_sunken};

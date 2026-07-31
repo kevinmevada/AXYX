@@ -102,7 +102,7 @@ class StudioController(QObject):
         if self._busy:
             return
         self._busy = True
-        self.view.show_loading("Loading MotionDatabase...")
+        self.view.show_loading("Loading Motion Database")
         def work():
             return self.project.open_default() if path is None else self.project.open(path)
         def on_success(model) -> None:
@@ -202,7 +202,7 @@ class StudioController(QObject):
             return
         subject_id = self._active_subject
         self._busy = True
-        self.view.show_loading(f"Building skeleton for {subject_id}/{session_name}...")
+        self.view.show_loading(f"Building skeleton for {subject_id}/{session_name}")
         def work():
             return self.motion.load_session(subject_id, session_name)
         def on_success(result) -> None:
@@ -259,12 +259,8 @@ class StudioController(QObject):
             description="load_session",
         )
     def select_recent(self, key: str) -> None:
-        """Handle ``subject/session`` recent shortcut."""
-        if "/" not in key:
-            return
-        subject_id, session_name = key.split("/", 1)
-        self.select_subject(subject_id)
-        self.select_session(session_name)
+        """Deprecated no-op — Recent explorer shortcut removed."""
+        _ = key
     # -------------------------------------------------------------- playback
     def play(self) -> None:
         self.playback.play()
