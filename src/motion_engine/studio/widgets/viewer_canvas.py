@@ -12,6 +12,7 @@ import numpy as np
 from PySide6.QtCore import QThread, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
+    QHBoxLayout,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -28,6 +29,7 @@ from motion_engine.rendering.visualization import (
 from motion_engine.renderer import PyVistaRenderer
 from motion_engine.skeleton import Pose, Skeleton
 from motion_engine.studio.widgets.error_banner import ErrorBanner
+from motion_engine.studio.widgets.subject_info_hud import SubjectInfoHud
 from motion_engine.studio.widgets.viewport_toolbar import ViewportToolbar
 from motion_engine.viewer import SkeletonViewer
 logger = logging.getLogger(__name__)
@@ -85,6 +87,7 @@ class ViewerCanvas(QFrame):
         self._camera_obs: list[tuple[Any, str, int]] = []
         self._error = ErrorBanner()
         self.toolbar = ViewportToolbar()
+        self.subject_info = SubjectInfoHud(self)
         self._viz = VisualizationManager(
             stick=StickRenderer(
                 on_activate=self._activate_stick,
@@ -105,11 +108,24 @@ class ViewerCanvas(QFrame):
         self._host_layout = QVBoxLayout(self._host)
         self._host_layout.setContentsMargins(0, 0, 0, 0)
         self._host_layout.setSpacing(0)
-        # No Qt HUD over the OpenGL surface (blanks the canvas on Windows).
+        # Subject clinical card lives ABOVE the OpenGL surface (not over it —
+        # Qt widgets over the interactor blank the canvas on Windows).
+        chrome = QWidget(self)
+        chrome.setObjectName("ViewportChrome")
+        chrome.setFixedHeight(0)
+        chrome_layout = QHBoxLayout(chrome)
+        chrome_layout.setContentsMargins(0, 8, 12, 0)
+        chrome_layout.setSpacing(0)
+        chrome_layout.addStretch(1)
+        chrome_layout.addWidget(
+            self.subject_info, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        self._viewport_chrome = chrome
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self._error)
+        layout.addWidget(self._viewport_chrome)
         layout.addWidget(self._host, stretch=1)
         self._camera_timer = QTimer(self)
         self._camera_timer.setTimerType(Qt.TimerType.PreciseTimer)
@@ -119,6 +135,29 @@ class ViewerCanvas(QFrame):
 
     def _publish_readout(self, text: str) -> None:
         self.sessionReadoutChanged.emit(text)
+
+    def set_subject_info(
+        self,
+        subject_id: str | None,
+        *,
+        mass: float | None = None,
+        height: float | None = None,
+        sex: str | None = None,
+    ) -> None:
+        """Show mass / height / sex for the selected subject (top-right chrome)."""
+        if not subject_id:
+            self.clear_subject_info()
+            return
+        kwargs: dict[str, object] = {"mass": mass, "height": height}
+        if sex is not None:
+            kwargs["sex"] = sex
+        self.subject_info.set_subject(subject_id, **kwargs)  # type: ignore[arg-type]
+        self._viewport_chrome.setFixedHeight(max(self.subject_info.sizeHint().height() + 12, 72))
+
+    def clear_subject_info(self) -> None:
+        """Hide the subject clinical card."""
+        self.subject_info.clear()
+        self._viewport_chrome.setFixedHeight(0)
 
     def _wire_toolbar(self) -> None:
         self.toolbar.cameraPresetRequested.connect(self.set_camera_preset)

@@ -30,6 +30,13 @@ class StudioView(Protocol):
     def set_subjects(self, subjects: list[SubjectModel]) -> None: ...
     def set_sessions(self, subject_id: str, sessions: list[SessionModel]) -> None: ...
     def clear_sessions(self) -> None: ...
+    def set_viewport_subject_info(
+        self,
+        subject_id: str | None,
+        *,
+        mass: float | None = None,
+        height: float | None = None,
+    ) -> None: ...
     def set_recent_sessions(self, keys: list[str]) -> None: ...
     def set_skeleton_preview(self, skeleton, frame: int) -> None: ...
     def sync_playback(self, model: PlaybackModel) -> None: ...
@@ -112,6 +119,7 @@ class StudioController(QObject):
                 )
                 self.view.set_subjects(self._subjects)
                 self.view.show_welcome(False)
+                self.view.set_viewport_subject_info(None)
                 if path is not None:
                     self.view.clear_sessions()
                 self.view.set_inspector_dataset(
@@ -170,6 +178,13 @@ class StudioController(QObject):
             subject = next((s for s in self._subjects if s.subject_id == subject_id), None)
             if subject is not None:
                 self.view.set_inspector_clinical(subject.to_dict())
+                self.view.set_viewport_subject_info(
+                    subject.subject_id,
+                    mass=subject.mass,
+                    height=subject.height,
+                )
+            else:
+                self.view.set_viewport_subject_info(subject_id)
             if self.state is not None:
                 self.state.set_selection(subject_id=subject_id, session_name=None)
             self._refresh_status()

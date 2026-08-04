@@ -336,6 +336,7 @@ class MainWindow(QMainWindow):
         self._dataset_open = not visible
         self.command_bar.set_welcome_mode(visible)
         if visible:
+            self.viewer_canvas.clear_subject_info()
             self._hide_side_docks()
         else:
             self._show_side_docks_for_workspace()
@@ -511,6 +512,17 @@ class MainWindow(QMainWindow):
 
     def clear_sessions(self) -> None:
         self.sidebar.clear_sessions()
+        self.viewer_canvas.clear_subject_info()
+
+    def set_viewport_subject_info(
+        self,
+        subject_id: str | None,
+        *,
+        mass: float | None = None,
+        height: float | None = None,
+    ) -> None:
+        """Show selected-subject clinical readout on the viewport chrome."""
+        self.viewer_canvas.set_subject_info(subject_id, mass=mass, height=height)
 
     def set_recent_sessions(self, keys: list[str]) -> None:
         """No-op — Recent explorer section removed."""

@@ -81,3 +81,26 @@ QWidget#ViewportStage {{
     border: none;
     border-radius: 0px;
 }}
+QWidget#ViewportChrome {{
+    background-color: {viewport_void};
+    border: none;
+}}
+QFrame#SubjectInfoHud {{
+    background-color: {surface};
+    border: 1px solid {border};
+    border-radius: 8px;
+}}
+QLabel#SubjectInfoId {{
+    font-family: {font_family};
+    font-size: 13px;
+    font-weight: 600;
+    color: {text_primary};
+    background: transparent;
+}}
+QLabel#SubjectInfoMeta {{
+    font-family: {font_family};
+    font-size: 11px;
+    font-weight: 400;
+    color: {text_secondary};
+    background: transparent;
+}}

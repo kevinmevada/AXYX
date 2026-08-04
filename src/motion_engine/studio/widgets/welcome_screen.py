@@ -1,25 +1,41 @@
-"""Welcome — brand-first landing with Source Serif 4 hero + Inter chrome."""
+"""Welcome — brand-first landing with glass panel + Source Serif boot.
+
+Boot uses the same Source Serif 4 / violet-Y wordmark as the hero panel.
+Entrance avoids QGraphicsBlurEffect (Windows lag/AV) and magnetic gimmicks —
+a tight panel, restrained animation, compact primary CTA.
+"""
 
 from __future__ import annotations
 
+import math
+import random
 from pathlib import Path
 
 from PySide6.QtCore import (
     QEasingCurve,
     QParallelAnimationGroup,
     QPoint,
+    QPointF,
+    QRectF,
     Qt,
+    QTimer,
     QVariantAnimation,
     Signal,
 )
 from PySide6.QtGui import (
     QColor,
+    QConicalGradient,
     QDragEnterEvent,
     QDropEvent,
     QFont,
     QFontMetrics,
+    QImage,
+    QLinearGradient,
     QPainter,
+    QPainterPath,
     QPen,
+    QPixmap,
+    QRadialGradient,
 )
 from PySide6.QtWidgets import (
     QFrame,
@@ -43,11 +59,26 @@ from motion_engine.studio.theme.wordmark import (
     wordmark_font,
 )
 
-_CTA_RADIUS = 10
+_CTA_RADIUS = 8
+_PANEL_RADIUS = 14
+_BOOT_PIXEL = 72
+_HERO_PIXEL = 72
 
 
 def _is_dataset_path(path: Path) -> bool:
     return path.suffix.lower() in {".mat", ".npz", ".c3d", ".trc"}
+
+
+def _build_noise_pixmap(size: int = 48, alpha: int = 8) -> QPixmap:
+    """Small tileable grain — generated once, reused."""
+    image = QImage(size, size, QImage.Format.Format_ARGB32_Premultiplied)
+    image.fill(Qt.GlobalColor.transparent)
+    rng = random.Random(7)
+    for y in range(size):
+        for x in range(size):
+            v = rng.randint(0, 255)
+            image.setPixelColor(x, y, QColor(v, v, v, alpha))
+    return QPixmap.fromImage(image)
 
 
 class _BrandMark(QWidget):
@@ -57,8 +88,8 @@ class _BrandMark(QWidget):
         super().__init__(parent)
         self.setObjectName("WelcomeBrandMark")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self._pixel_size = 96
-        self._reveal = 0.0
+        self._pixel_size = _HERO_PIXEL
+        self._reveal = 1.0
         self._update_size()
 
     def set_reveal(self, value: float) -> None:
@@ -71,7 +102,7 @@ class _BrandMark(QWidget):
             weight=WORDMARK_WEIGHT_HERO,
             letter_spacing=0.0,
         )
-        self.setFixedSize(max(width + 24, 320), max(height + 20, 110))
+        self.setFixedSize(max(width + 8, 240), max(height + 8, 78))
 
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self)
@@ -79,15 +110,9 @@ class _BrandMark(QWidget):
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         font = wordmark_font(pixel_size=self._pixel_size, weight=WORDMARK_WEIGHT_HERO)
         metrics = QFontMetrics(font)
-        violet = QColor(WORDMARK_Y)
-
         full_w = metrics.horizontalAdvance("AXYX")
         x0 = (self.width() - full_w) // 2
-        baseline = (self.height() + metrics.ascent() - metrics.descent()) // 2 - 2
-        reveal_x = x0 + int(full_w * self._reveal) + 2
-
-        painter.save()
-        painter.setClipRect(0, 0, reveal_x, self.height())
+        baseline = (self.height() + metrics.ascent() - metrics.descent()) // 2 - 1
         paint_wordmark(
             painter,
             x=x0,
@@ -98,21 +123,11 @@ class _BrandMark(QWidget):
             ink=WORDMARK_INK,
             accent=WORDMARK_Y,
         )
-        painter.restore()
-
-        if 0.02 < self._reveal < 0.995:
-            edge = QPen(violet)
-            edge.setWidthF(1.25)
-            painter.setPen(edge)
-            top = baseline - metrics.ascent() + 6
-            bottom = baseline + metrics.descent() + 2
-            painter.drawLine(QPoint(reveal_x, top), QPoint(reveal_x, bottom))
-
         painter.end()
 
 
 class _PaintedLine(QWidget):
-    """Single-line text painted with QPainter — immune to QSS font crush."""
+    """Single-line body text — immune to QSS font crush."""
 
     def __init__(
         self,
@@ -153,8 +168,8 @@ class _PaintedLine(QWidget):
     def _update_size(self) -> None:
         metrics = QFontMetrics(self._font())
         self.setFixedSize(
-            max(metrics.horizontalAdvance(self._text) + 24, 280),
-            metrics.height() + 12,
+            max(metrics.horizontalAdvance(self._text) + 12, 220),
+            metrics.height() + 6,
         )
 
     def paintEvent(self, event) -> None:  # noqa: N802
@@ -174,13 +189,14 @@ class _PaintedLine(QWidget):
 
 
 class _CtaButton(QPushButton):
-    """Primary CTA — 10px radius rectangle (not a capsule)."""
+    """Compact primary CTA — solid accent, quiet hover, no magnetic gimmick."""
 
     def __init__(self, text: str, parent: QWidget | None = None) -> None:
         super().__init__(text, parent)
-        self.setObjectName("PrimaryButton")
+        self.setObjectName("WelcomeCta")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFlat(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._hover = False
         self._pressed = False
         c = DEFAULT_THEME.colors
@@ -214,27 +230,321 @@ class _CtaButton(QPushButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        rect = self.rect().adjusted(1, 1, -1, -1)
+
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
         if self._pressed:
             fill = self._fill_pressed
         elif self._hover:
             fill = self._fill_hover
         else:
             fill = self._fill
+
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(fill)
         painter.drawRoundedRect(rect, float(_CTA_RADIUS), float(_CTA_RADIUS))
+
+        # hairline top edge — polish without thick plastic gradient
+        if not self._pressed:
+            edge = QLinearGradient(rect.topLeft(), rect.topRight())
+            edge.setColorAt(0.0, QColor(255, 255, 255, 0))
+            edge.setColorAt(0.5, QColor(255, 255, 255, 36 if self._hover else 22))
+            edge.setColorAt(1.0, QColor(255, 255, 255, 0))
+            painter.setPen(QPen(edge, 1.0))
+            painter.drawLine(
+                QPointF(rect.left() + 10, rect.top() + 0.5),
+                QPointF(rect.right() - 10, rect.top() + 0.5),
+            )
+
         font = QFont(studio_font_family())
-        font.setPixelSize(14)
-        font.setWeight(QFont.Weight.DemiBold)
+        font.setPixelSize(13)
+        font.setWeight(QFont.Weight.Medium)
+        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.4)
         painter.setFont(font)
         painter.setPen(self._ink)
         painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), self.text())
         painter.end()
 
 
+class _BootOverlay(QWidget):
+    """Scramble boot in Source Serif 4 — time-eased, low-churn, same as hero."""
+
+    finished = Signal()
+
+    _CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    _TARGET = "AXYX"
+    # Slow, even cadence (~2s scramble + hold + soft fade).
+    _SCRAMBLE_MS = 2000
+    _HOLD_MS = 480
+    _FADE_MS = 720
+    # Scramble glyph changes at ~12 Hz — feels continuous without thrashing paint.
+    _SCRAMBLE_STEPS = 24
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+        self._progress = 0.0
+        self._chars = list(self._TARGET)
+        self._rng = random.Random(11)
+        self._opacity = 1.0
+        self._scramble_step = -1
+        self._anim: QVariantAnimation | None = None
+        self._fade_anim: QVariantAnimation | None = None
+
+        self._font = wordmark_font(pixel_size=_BOOT_PIXEL, weight=WORDMARK_WEIGHT_HERO)
+        self._metrics = QFontMetrics(self._font)
+        self._slot_widths = [
+            self._metrics.horizontalAdvance(ch) for ch in self._TARGET
+        ]
+        self._full_w = sum(self._slot_widths)
+        self._ink = QColor(WORDMARK_INK)
+        self._violet = QColor(WORDMARK_Y)
+        self._bg = QColor(DEFAULT_THEME.colors.background)
+        self._track = QColor(WORDMARK_Y)
+        self._track.setAlpha(40)
+        self._bar_fill = QColor(WORDMARK_Y)
+        self._bar_fill.setAlpha(200)
+        self._colors = (self._ink, self._ink, self._violet, self._ink)
+
+    def start(self) -> None:
+        if self._anim is not None:
+            self._anim.stop()
+        if self._fade_anim is not None:
+            self._fade_anim.stop()
+        self._progress = 0.0
+        self._opacity = 1.0
+        self._scramble_step = -1
+        self._chars = list(self._TARGET)
+        self._sync_chars(0.0)
+        self.show()
+        self.raise_()
+
+        anim = QVariantAnimation(self)
+        anim.setDuration(self._SCRAMBLE_MS)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        # Ease out so last letters settle calmly (less "slot-machine" snap).
+        anim.setEasingCurve(QEasingCurve.Type.InOutSine)
+        anim.valueChanged.connect(self._on_progress)
+        anim.finished.connect(self._on_scramble_done)
+        anim.start(QVariantAnimation.DeletionPolicy.DeleteWhenStopped)
+        self._anim = anim
+
+    def _on_progress(self, value: object) -> None:
+        t = float(value)
+        self._progress = t
+        step = int(t * self._SCRAMBLE_STEPS)
+        if step != self._scramble_step:
+            self._scramble_step = step
+            self._sync_chars(t)
+            self._update_mark_region()
+        else:
+            # Progress bar moves every tick; clip repaint keeps it cheap.
+            self._update_mark_region()
+
+    def _sync_chars(self, t: float) -> None:
+        # Lock letters one-by-one across the easing curve.
+        n = len(self._TARGET)
+        reveal_count = min(n, int(t * n + 1e-6) if t < 1.0 else n)
+        if t >= 0.999:
+            reveal_count = n
+        chars: list[str] = []
+        for i, ch in enumerate(self._TARGET):
+            if i < reveal_count:
+                chars.append(ch)
+            else:
+                chars.append(self._rng.choice(self._CHARSET))
+        self._chars = chars
+
+    def _on_scramble_done(self) -> None:
+        self._progress = 1.0
+        self._chars = list(self._TARGET)
+        self._update_mark_region()
+        QTimer.singleShot(self._HOLD_MS, self._fade_out)
+
+    def _fade_out(self) -> None:
+        anim = QVariantAnimation(self)
+        anim.setDuration(self._FADE_MS)
+        anim.setStartValue(1.0)
+        anim.setEndValue(0.0)
+        anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        anim.valueChanged.connect(self._set_opacity)
+        anim.finished.connect(self._on_fade_done)
+        anim.start(QVariantAnimation.DeletionPolicy.DeleteWhenStopped)
+        self._fade_anim = anim
+
+    def _set_opacity(self, value: object) -> None:
+        self._opacity = float(value)
+        # Full repaint only during fade (background must soft-dissolve).
+        self.update()
+
+    def _on_fade_done(self) -> None:
+        self.hide()
+        self.finished.emit()
+
+    def _mark_rect(self) -> QRectF:
+        """Tight dirty region around wordmark + bar — avoids full-window churn."""
+        x0 = (self.width() - self._full_w) // 2
+        baseline = self.height() // 2 + self._metrics.ascent() // 3
+        top = baseline - self._metrics.ascent() - 8
+        bar_y = baseline + self._metrics.descent() + 18
+        bottom = bar_y + 8
+        pad = 24
+        return QRectF(
+            x0 - pad,
+            top,
+            self._full_w + pad * 2,
+            bottom - top,
+        )
+
+    def _update_mark_region(self) -> None:
+        r = self._mark_rect().adjusted(-4, -4, 4, 4).toAlignedRect()
+        self.update(r)
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        painter = QPainter(self)
+        # Solid fill first — no AA needed on full-bleed rect.
+        painter.setOpacity(self._opacity)
+        if event.rect() == self.rect() or self._opacity < 0.999:
+            painter.fillRect(self.rect(), self._bg)
+        else:
+            # Clip paints still need bg under the mark so glyphs don't trail.
+            painter.fillRect(event.rect(), self._bg)
+
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        painter.setFont(self._font)
+        x0 = (self.width() - self._full_w) // 2
+        baseline = self.height() // 2 + self._metrics.ascent() // 3
+        cursor = float(x0)
+        for i, ch in enumerate(self._chars):
+            slot_w = self._slot_widths[i]
+            glyph_w = self._metrics.horizontalAdvance(ch)
+            painter.setPen(self._colors[i])
+            painter.drawText(
+                int(round(cursor + (slot_w - glyph_w) * 0.5)),
+                int(round(baseline)),
+                ch,
+            )
+            cursor += slot_w
+
+        bar_w = min(self._full_w, 200)
+        bar_h = 2
+        bar_x = (self.width() - bar_w) // 2
+        bar_y = baseline + self._metrics.descent() + 18
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(self._track)
+        painter.drawRoundedRect(bar_x, bar_y, bar_w, bar_h, 1, 1)
+        painter.setBrush(self._bar_fill)
+        painter.drawRoundedRect(
+            bar_x, bar_y, int(bar_w * self._progress), bar_h, 1, 1
+        )
+        painter.end()
+
+
+class _GlassPanel(QFrame):
+    """Compact translucent card — grain + rim, throttled cursor sheen."""
+
+    _noise_pixmap: QPixmap | None = None
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("WelcomeGlassPanel")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        self.setMouseTracking(True)
+        self._mouse_pos: QPointF | None = None
+        self._sheen_opacity = 0.0
+        self._last_paint_pos: QPointF | None = None
+        if _GlassPanel._noise_pixmap is None:
+            _GlassPanel._noise_pixmap = _build_noise_pixmap()
+
+    def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        pos = event.position()
+        # Skip repaint unless cursor moved enough — cuts sheen thrash.
+        prev = self._last_paint_pos
+        if prev is None or (pos - prev).manhattanLength() > 8:
+            self._mouse_pos = pos
+            self._last_paint_pos = pos
+            self.update()
+        super().mouseMoveEvent(event)
+
+    def enterEvent(self, event) -> None:  # noqa: N802
+        self._sheen_opacity = 1.0
+        self.update()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:  # noqa: N802
+        self._mouse_pos = None
+        self._last_paint_pos = None
+        self._sheen_opacity = 0.0
+        self.update()
+        super().leaveEvent(event)
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        path = QPainterPath()
+        path.addRoundedRect(rect, _PANEL_RADIUS, _PANEL_RADIUS)
+
+        accent = QColor(WORDMARK_Y)
+
+        painter.setClipPath(path)
+        # Quiet glass — slightly more opaque so content reads clean
+        painter.fillRect(self.rect(), QColor(255, 255, 255, 150))
+
+        center = rect.center()
+        if self._mouse_pos is not None:
+            dx = self._mouse_pos.x() - center.x()
+            dy = self._mouse_pos.y() - center.y()
+            angle = math.degrees(math.atan2(-dy, dx))
+        else:
+            angle = 90.0
+
+        conic = QConicalGradient(center, angle)
+        bright = QColor(255, 255, 255, 160)
+        dim = QColor(accent.red(), accent.green(), accent.blue(), 28)
+        conic.setColorAt(0.0, bright)
+        conic.setColorAt(0.18, dim)
+        conic.setColorAt(0.5, dim)
+        conic.setColorAt(0.82, dim)
+        conic.setColorAt(1.0, bright)
+        painter.setPen(QPen(conic, 1.1))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(path)
+
+        # soft outer stroke for card edge definition
+        painter.setPen(QPen(QColor(28, 30, 28, 18), 1.0))
+        painter.drawPath(path)
+
+        hairline = QLinearGradient(rect.topLeft(), rect.topRight())
+        hairline.setColorAt(0.0, QColor(255, 255, 255, 0))
+        hairline.setColorAt(0.5, QColor(255, 255, 255, 180))
+        hairline.setColorAt(1.0, QColor(255, 255, 255, 0))
+        painter.setPen(QPen(hairline, 1.0))
+        painter.drawLine(
+            QPointF(rect.left() + 24, rect.top() + 1),
+            QPointF(rect.right() - 24, rect.top() + 1),
+        )
+
+        if _GlassPanel._noise_pixmap is not None:
+            painter.setOpacity(0.35)
+            painter.drawTiledPixmap(self.rect(), _GlassPanel._noise_pixmap)
+            painter.setOpacity(1.0)
+
+        if self._sheen_opacity > 0.001 and self._mouse_pos is not None:
+            sheen = QRadialGradient(self._mouse_pos, 160)
+            sheen.setColorAt(0.0, QColor(255, 255, 255, int(55 * self._sheen_opacity)))
+            sheen.setColorAt(1.0, QColor(255, 255, 255, 0))
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Plus)
+            painter.fillPath(path, sheen)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+
+        painter.end()
+
+
 class WelcomeScreen(QWidget):
-    """Upper-stage welcome — one hero, one job, one CTA."""
+    """Upper-stage welcome — boot → tight glass panel → one CTA."""
 
     openDatasetRequested = Signal()
     datasetDropped = Signal(str)
@@ -244,139 +554,136 @@ class WelcomeScreen(QWidget):
         self.setObjectName("WelcomeRoot")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAcceptDrops(True)
+        self.setMouseTracking(True)
         self._entered = False
         self._anim_group: QParallelAnimationGroup | None = None
+        self._panel_opacity = 0.0
 
         c = DEFAULT_THEME.colors
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(72, 56, 72, 24)
-        root.setSpacing(0)
-        # Anchor in the upper stage under the persistent command bar.
-        root.addSpacing(28)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addStretch(1)
+
+        self._panel = _GlassPanel(self)
+        self._panel.setFixedWidth(400)
+        self._panel.setMouseTracking(True)
+        panel_layout = QVBoxLayout(self._panel)
+        panel_layout.setContentsMargins(28, 24, 28, 22)
+        panel_layout.setSpacing(0)
 
         self._brand = _BrandMark()
-        root.addWidget(self._brand, alignment=Qt.AlignmentFlag.AlignCenter)
+        panel_layout.addWidget(self._brand, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        root.addSpacing(20)
-        # One job: explain the CTA. Brand voice lives in the wordmark alone.
+        panel_layout.addSpacing(10)
         self._support = _PaintedLine(
             "Open a gait dataset to explore subjects and reconstruct motion.",
-            pixel_size=15,
+            pixel_size=13,
             weight=QFont.Weight.Normal,
             color=QColor(c.text_secondary),
         )
-        root.addWidget(self._support, alignment=Qt.AlignmentFlag.AlignCenter)
+        panel_layout.addWidget(self._support, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        root.addSpacing(36)
+        panel_layout.addSpacing(18)
         self._cta = QStackedWidget()
-        self._cta.setFixedWidth(280)
-        self._cta.setMinimumHeight(52)
+        self._cta.setFixedWidth(200)
+        self._cta.setFixedHeight(40)
 
         self._open_btn = _CtaButton("Open Dataset")
-        self._open_btn.setMinimumHeight(52)
-        self._open_btn.setMinimumWidth(260)
-        self._open_btn.setFixedHeight(52)
+        self._open_btn.setFixedHeight(40)
+        self._open_btn.setFixedWidth(200)
         self._open_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
         self._open_btn.clicked.connect(self.openDatasetRequested.emit)
 
         opening = QFrame()
         opening.setObjectName("WelcomeOpening")
-        opening.setMinimumHeight(52)
+        opening.setFixedHeight(40)
         opening_layout = QVBoxLayout(opening)
-        opening_layout.setContentsMargins(16, 10, 16, 10)
-        opening_layout.setSpacing(8)
+        opening_layout.setContentsMargins(8, 4, 8, 4)
+        opening_layout.setSpacing(6)
         opening_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._opening_label = QLabel("Opening…")
         self._opening_label.setObjectName("WelcomeOpeningLabel")
         self._opening_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._opening_label.setStyleSheet(
-            f"color: {c.accent}; font-size: 14px; font-weight: 600; background: transparent;"
+            f"color: {c.accent}; font-size: 12px; font-weight: 600; background: transparent;"
         )
         self._opening_bar = QProgressBar()
         self._opening_bar.setObjectName("WelcomeOpeningBar")
         self._opening_bar.setRange(0, 100)
         self._opening_bar.setValue(0)
         self._opening_bar.setTextVisible(False)
-        self._opening_bar.setFixedHeight(4)
-        self._opening_bar.setMinimumWidth(220)
+        self._opening_bar.setFixedHeight(3)
+        self._opening_bar.setMinimumWidth(160)
         opening_layout.addWidget(self._opening_label)
         opening_layout.addWidget(self._opening_bar)
 
         self._cta.addWidget(self._open_btn)
         self._cta.addWidget(opening)
         self._cta.setCurrentIndex(0)
-        root.addWidget(self._cta, alignment=Qt.AlignmentFlag.AlignCenter)
+        panel_layout.addWidget(self._cta, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        root.addSpacing(14)
-        self._hint = _PaintedLine(
-            "Drop a dataset here  ·  Ctrl+O",
-            pixel_size=12,
-            weight=QFont.Weight.Medium,
-            color=QColor(c.text_muted),
-            letter_spacing=0.3,
-        )
-        root.addWidget(self._hint, alignment=Qt.AlignmentFlag.AlignCenter)
+        outer.addWidget(self._panel, alignment=Qt.AlignmentFlag.AlignCenter)
+        outer.addStretch(1)
 
-        root.addStretch(1)
+        self._boot = _BootOverlay(self)
+        self._boot.setGeometry(self.rect())
+        self._boot.finished.connect(self._play_panel_entrance)
 
-        self._brand.set_reveal(0.0)
-        for w in (self._support, self._hint):
-            w.set_alpha(0.0)
+        self._brand.set_reveal(1.0)
+        self._support.set_alpha(0.0)
         self._cta.setEnabled(False)
+        self._cta.hide()
+        self._panel.setVisible(False)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        self._boot.setGeometry(self.rect())
+        super().resizeEvent(event)
 
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
         if not self._entered:
             self._entered = True
-            self._play_entrance()
+            self._panel.setVisible(False)
+            QTimer.singleShot(40, self._boot.start)
 
-    def _play_entrance(self) -> None:
-        if self._anim_group is not None:
-            self._anim_group.stop()
+    def _play_panel_entrance(self) -> None:
+        """Slow slide + soft copy fade — no graphics blur."""
+        self._panel.setVisible(True)
+        self._panel.raise_()
 
         group = QParallelAnimationGroup(self)
 
-        trace = QVariantAnimation(self)
-        trace.setDuration(720)
-        trace.setStartValue(0.0)
-        trace.setEndValue(1.0)
-        trace.setEasingCurve(QEasingCurve.Type.OutCubic)
-        trace.valueChanged.connect(self._brand.set_reveal)
-        group.addAnimation(trace)
+        end_pos = self._panel.pos()
+        travel = 18
+        self._panel.move(end_pos + QPoint(0, travel))
+        slide_anim = QVariantAnimation(self)
+        slide_anim.setDuration(700)
+        slide_anim.setStartValue(0.0)
+        slide_anim.setEndValue(float(travel))
+        slide_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        slide_anim.valueChanged.connect(
+            lambda v, end=end_pos, t=travel: self._panel.move(
+                end + QPoint(0, t - int(float(v)))
+            )
+        )
+        group.addAnimation(slide_anim)
 
-        def _fade(target, delay: int, duration: int = 400) -> None:
-            anim = QVariantAnimation(self)
-            anim.setDuration(delay + duration)
-            anim.setStartValue(0.0)
-            anim.setEndValue(1.0)
-            anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-
-            def apply(v, widget=target, d=delay, dur=duration) -> None:
-                total = d + dur
-                local = 0.0 if total <= 0 else max(0.0, (float(v) * total - d) / dur)
-                widget.set_alpha(min(1.0, local))
-
-            anim.valueChanged.connect(apply)
-            group.addAnimation(anim)
-
-        _fade(self._support, 380)
-        _fade(self._hint, 620)
-
-        self._cta.hide()
-        show_cta = QVariantAnimation(self)
-        show_cta.setDuration(520)
-        show_cta.setStartValue(0)
-        show_cta.setEndValue(1)
+        support_anim = QVariantAnimation(self)
+        support_anim.setDuration(640)
+        support_anim.setStartValue(0.0)
+        support_anim.setEndValue(1.0)
+        support_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        support_anim.valueChanged.connect(self._support.set_alpha)
+        group.addAnimation(support_anim)
 
         def _show_cta() -> None:
             self._cta.show()
             self._cta.setEnabled(True)
 
-        show_cta.finished.connect(_show_cta)
-        group.addAnimation(show_cta)
+        QTimer.singleShot(420, _show_cta)
 
         self._anim_group = group
         group.start()

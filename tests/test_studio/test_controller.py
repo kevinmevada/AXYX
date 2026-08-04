@@ -33,6 +33,7 @@ class FakeView:
     metrics: dict[str, Any] = field(default_factory=dict)
     dataset: dict[str, Any] = field(default_factory=dict)
     playback_fields: dict[str, Any] = field(default_factory=dict)
+    viewport_subject: dict[str, Any] = field(default_factory=dict)
     heatmap: Any = None
     ai: Any = None
     comparison: Any = None
@@ -56,6 +57,19 @@ class FakeView:
 
     def clear_sessions(self) -> None:
         self.sessions = []
+
+    def set_viewport_subject_info(
+        self,
+        subject_id: str | None,
+        *,
+        mass: float | None = None,
+        height: float | None = None,
+    ) -> None:
+        self.viewport_subject = {
+            "subject_id": subject_id,
+            "mass": mass,
+            "height": height,
+        }
 
     def set_recent_sessions(self, keys: list[str]) -> None:
         self.recent = keys
