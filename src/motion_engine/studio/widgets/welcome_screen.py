@@ -3,6 +3,18 @@
 Boot uses the same Source Serif 4 / violet-Y wordmark as the hero panel.
 Entrance avoids QGraphicsBlurEffect (Windows lag/AV) and magnetic gimmicks —
 a tight panel, restrained animation, compact primary CTA.
+
+PERFORMANCE NOTE (this revision):
+_GlassPanel used to rebuild its entire look (conic-gradient border stroke,
+hairline, tiled noise) from scratch on every mouseMoveEvent. Stroking a
+gradient pen along a rounded-rect path is one of the more expensive things
+QPainter's raster backend does, and doing it 60x/sec while ALSO animating
+the panel's position during entrance is what caused the visible lag.
+
+Fix: the static card look is rendered once into a cached QPixmap (rebuilt
+only on resize). Mouse movement now just blits that cached pixmap and
+paints one small radial "sheen" circle on top, with the repaint throttled
+to ~60fps and clipped to a small dirty rect instead of the whole widget.
 """
 
 from __future__ import annotations
@@ -39,6 +51,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QFrame,
+    QGraphicsOpacityEffect,
     QLabel,
     QProgressBar,
     QPushButton,
@@ -63,6 +76,22 @@ _CTA_RADIUS = 8
 _PANEL_RADIUS = 14
 _BOOT_PIXEL = 72
 _HERO_PIXEL = 72
+
+
+def _safe_stop_anim(anim: QVariantAnimation | None) -> None:
+    """Stop a QVariantAnimation even if DeleteWhenStopped already destroyed it."""
+    if anim is None:
+        return
+    try:
+        anim.stop()
+    except RuntimeError:
+        # C++ object already deleted (DeleteWhenStopped).
+        pass
+
+
+# Mouse-move driven repaints are coalesced to this interval instead of
+# firing on every native move event (which can be 100s of Hz on some mice).
+_SHEEN_THROTTLE_MS = 16  # ~60fps ceiling
 
 
 def _is_dataset_path(path: Path) -> bool:
@@ -127,7 +156,7 @@ class _BrandMark(QWidget):
 
 
 class _PaintedLine(QWidget):
-    """Single-line body text — immune to QSS font crush."""
+    """Body text — QPainter, optional wrap so it never overflows the panel."""
 
     def __init__(
         self,
@@ -137,6 +166,7 @@ class _PaintedLine(QWidget):
         weight: QFont.Weight,
         color: QColor,
         letter_spacing: float = 0.0,
+        max_width: int = 320,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -146,6 +176,7 @@ class _PaintedLine(QWidget):
         self._weight = weight
         self._color = QColor(color)
         self._letter_spacing = letter_spacing
+        self._max_width = max(120, int(max_width))
         self._alpha = 1.0
         self._update_size()
 
@@ -167,9 +198,16 @@ class _PaintedLine(QWidget):
 
     def _update_size(self) -> None:
         metrics = QFontMetrics(self._font())
+        # Bound width so wrapping measures against the glass content area.
+        bound = QRectF(0, 0, float(self._max_width), 400.0)
+        br = metrics.boundingRect(
+            bound.toRect(),
+            int(Qt.AlignmentFlag.AlignHCenter | Qt.TextFlag.TextWordWrap),
+            self._text,
+        )
         self.setFixedSize(
-            max(metrics.horizontalAdvance(self._text) + 12, 220),
-            metrics.height() + 6,
+            max(br.width() + 8, min(self._max_width, 220)),
+            max(br.height() + 4, metrics.height() + 6),
         )
 
     def paintEvent(self, event) -> None:  # noqa: N802
@@ -178,18 +216,20 @@ class _PaintedLine(QWidget):
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         font = self._font()
         painter.setFont(font)
-        metrics = QFontMetrics(font)
         color = QColor(self._color)
         color.setAlphaF(self._alpha * color.alphaF())
         painter.setPen(color)
-        x = (self.width() - metrics.horizontalAdvance(self._text)) // 2
-        baseline = (self.height() + metrics.ascent() - metrics.descent()) // 2
-        painter.drawText(x, baseline, self._text)
+        painter.drawText(
+            self.rect(),
+            int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+                | Qt.TextFlag.TextWordWrap),
+            self._text,
+        )
         painter.end()
 
 
 class _CtaButton(QPushButton):
-    """Compact primary CTA — solid accent, quiet hover, no magnetic gimmick."""
+    """Compact primary CTA — solid accent, quiet color hover only."""
 
     def __init__(self, text: str, parent: QWidget | None = None) -> None:
         super().__init__(text, parent)
@@ -243,11 +283,10 @@ class _CtaButton(QPushButton):
         painter.setBrush(fill)
         painter.drawRoundedRect(rect, float(_CTA_RADIUS), float(_CTA_RADIUS))
 
-        # hairline top edge — polish without thick plastic gradient
         if not self._pressed:
             edge = QLinearGradient(rect.topLeft(), rect.topRight())
             edge.setColorAt(0.0, QColor(255, 255, 255, 0))
-            edge.setColorAt(0.5, QColor(255, 255, 255, 36 if self._hover else 22))
+            edge.setColorAt(0.5, QColor(255, 255, 255, 28 if self._hover else 18))
             edge.setColorAt(1.0, QColor(255, 255, 255, 0))
             painter.setPen(QPen(edge, 1.0))
             painter.drawLine(
@@ -266,17 +305,15 @@ class _CtaButton(QPushButton):
 
 
 class _BootOverlay(QWidget):
-    """Scramble boot in Source Serif 4 — time-eased, low-churn, same as hero."""
+    """Scramble boot in Source Serif 4 — scramble only, fixed size (no enlarge)."""
 
     finished = Signal()
 
     _CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     _TARGET = "AXYX"
-    # Slow, even cadence (~2s scramble + hold + soft fade).
     _SCRAMBLE_MS = 2000
     _HOLD_MS = 480
     _FADE_MS = 720
-    # Scramble glyph changes at ~12 Hz — feels continuous without thrashing paint.
     _SCRAMBLE_STEPS = 24
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -307,10 +344,10 @@ class _BootOverlay(QWidget):
         self._colors = (self._ink, self._ink, self._violet, self._ink)
 
     def start(self) -> None:
-        if self._anim is not None:
-            self._anim.stop()
-        if self._fade_anim is not None:
-            self._fade_anim.stop()
+        _safe_stop_anim(self._anim)
+        _safe_stop_anim(self._fade_anim)
+        self._anim = None
+        self._fade_anim = None
         self._progress = 0.0
         self._opacity = 1.0
         self._scramble_step = -1
@@ -323,7 +360,6 @@ class _BootOverlay(QWidget):
         anim.setDuration(self._SCRAMBLE_MS)
         anim.setStartValue(0.0)
         anim.setEndValue(1.0)
-        # Ease out so last letters settle calmly (less "slot-machine" snap).
         anim.setEasingCurve(QEasingCurve.Type.InOutSine)
         anim.valueChanged.connect(self._on_progress)
         anim.finished.connect(self._on_scramble_done)
@@ -337,13 +373,9 @@ class _BootOverlay(QWidget):
         if step != self._scramble_step:
             self._scramble_step = step
             self._sync_chars(t)
-            self._update_mark_region()
-        else:
-            # Progress bar moves every tick; clip repaint keeps it cheap.
-            self._update_mark_region()
+        self._update_mark_region()
 
     def _sync_chars(self, t: float) -> None:
-        # Lock letters one-by-one across the easing curve.
         n = len(self._TARGET)
         reveal_count = min(n, int(t * n + 1e-6) if t < 1.0 else n)
         if t >= 0.999:
@@ -363,19 +395,25 @@ class _BootOverlay(QWidget):
         QTimer.singleShot(self._HOLD_MS, self._fade_out)
 
     def _fade_out(self) -> None:
+        _safe_stop_anim(self._fade_anim)
+        self._fade_anim = None
         anim = QVariantAnimation(self)
         anim.setDuration(self._FADE_MS)
         anim.setStartValue(1.0)
         anim.setEndValue(0.0)
         anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
         anim.valueChanged.connect(self._set_opacity)
-        anim.finished.connect(self._on_fade_done)
+
+        def _done() -> None:
+            self._fade_anim = None
+            self._on_fade_done()
+
+        anim.finished.connect(_done)
         anim.start(QVariantAnimation.DeletionPolicy.DeleteWhenStopped)
         self._fade_anim = anim
 
     def _set_opacity(self, value: object) -> None:
         self._opacity = float(value)
-        # Full repaint only during fade (background must soft-dissolve).
         self.update()
 
     def _on_fade_done(self) -> None:
@@ -383,7 +421,6 @@ class _BootOverlay(QWidget):
         self.finished.emit()
 
     def _mark_rect(self) -> QRectF:
-        """Tight dirty region around wordmark + bar — avoids full-window churn."""
         x0 = (self.width() - self._full_w) // 2
         baseline = self.height() // 2 + self._metrics.ascent() // 3
         top = baseline - self._metrics.ascent() - 8
@@ -403,12 +440,10 @@ class _BootOverlay(QWidget):
 
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self)
-        # Solid fill first — no AA needed on full-bleed rect.
         painter.setOpacity(self._opacity)
         if event.rect() == self.rect() or self._opacity < 0.999:
             painter.fillRect(self.rect(), self._bg)
         else:
-            # Clip paints still need bg under the mark so glyphs don't trail.
             painter.fillRect(event.rect(), self._bg)
 
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
@@ -442,7 +477,15 @@ class _BootOverlay(QWidget):
 
 
 class _GlassPanel(QFrame):
-    """Compact translucent card — grain + rim, throttled cursor sheen."""
+    """Compact translucent card — grain + rim, cached base + throttled sheen.
+
+    The static look (fill, conic-gradient rim stroke, hairline, noise tile)
+    is expensive to compute per-frame, so it's rendered once into
+    `self._base_pixmap` and only rebuilt on resize. Mouse movement redraws
+    just a small radial sheen on top of the cached image, throttled to
+    ~60fps via a coalescing QTimer instead of repainting on every native
+    move event.
+    """
 
     _noise_pixmap: QPixmap | None = None
 
@@ -452,35 +495,40 @@ class _GlassPanel(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         self.setMouseTracking(True)
         self._mouse_pos: QPointF | None = None
+        self._pending_mouse_pos: QPointF | None = None
         self._sheen_opacity = 0.0
-        self._last_paint_pos: QPointF | None = None
+        self._sheen_anim: QVariantAnimation | None = None
+        self._base_pixmap: QPixmap | None = None
+        self._base_pixmap_size = (-1, -1)
+
         if _GlassPanel._noise_pixmap is None:
             _GlassPanel._noise_pixmap = _build_noise_pixmap()
 
-    def mouseMoveEvent(self, event) -> None:  # noqa: N802
-        pos = event.position()
-        # Skip repaint unless cursor moved enough — cuts sheen thrash.
-        prev = self._last_paint_pos
-        if prev is None or (pos - prev).manhattanLength() > 8:
-            self._mouse_pos = pos
-            self._last_paint_pos = pos
-            self.update()
-        super().mouseMoveEvent(event)
+        # Coalesces rapid mouse-move events into one repaint per tick,
+        # so we never do more work than ~60 paints/sec regardless of how
+        # fast the OS delivers move events.
+        self._move_timer = QTimer(self)
+        self._move_timer.setInterval(_SHEEN_THROTTLE_MS)
+        self._move_timer.setSingleShot(False)
+        self._move_timer.timeout.connect(self._apply_pending_mouse_pos)
 
-    def enterEvent(self, event) -> None:  # noqa: N802
-        self._sheen_opacity = 1.0
-        self.update()
-        super().enterEvent(event)
+    # -- cached base rendering ------------------------------------------------
 
-    def leaveEvent(self, event) -> None:  # noqa: N802
-        self._mouse_pos = None
-        self._last_paint_pos = None
-        self._sheen_opacity = 0.0
-        self.update()
-        super().leaveEvent(event)
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        self._base_pixmap = None
+        super().resizeEvent(event)
 
-    def paintEvent(self, event) -> None:  # noqa: N802
-        painter = QPainter(self)
+    def _ensure_base_pixmap(self) -> QPixmap:
+        size = (self.width(), self.height())
+        if self._base_pixmap is not None and self._base_pixmap_size == size:
+            return self._base_pixmap
+
+        dpr = self.devicePixelRatioF()
+        pm = QPixmap(int(self.width() * dpr), int(self.height() * dpr))
+        pm.setDevicePixelRatio(dpr)
+        pm.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pm)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
@@ -490,18 +538,13 @@ class _GlassPanel(QFrame):
         accent = QColor(WORDMARK_Y)
 
         painter.setClipPath(path)
-        # Quiet glass — slightly more opaque so content reads clean
         painter.fillRect(self.rect(), QColor(255, 255, 255, 150))
 
+        # Static rim gradient (angle fixed at 90° when idle — the "premium"
+        # rotating rim only happens on hover via the animated sheen below,
+        # kept cheap by living in the cached pixmap otherwise).
         center = rect.center()
-        if self._mouse_pos is not None:
-            dx = self._mouse_pos.x() - center.x()
-            dy = self._mouse_pos.y() - center.y()
-            angle = math.degrees(math.atan2(-dy, dx))
-        else:
-            angle = 90.0
-
-        conic = QConicalGradient(center, angle)
+        conic = QConicalGradient(center, 90.0)
         bright = QColor(255, 255, 255, 160)
         dim = QColor(accent.red(), accent.green(), accent.blue(), 28)
         conic.setColorAt(0.0, bright)
@@ -513,7 +556,6 @@ class _GlassPanel(QFrame):
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawPath(path)
 
-        # soft outer stroke for card edge definition
         painter.setPen(QPen(QColor(28, 30, 28, 18), 1.0))
         painter.drawPath(path)
 
@@ -532,7 +574,91 @@ class _GlassPanel(QFrame):
             painter.drawTiledPixmap(self.rect(), _GlassPanel._noise_pixmap)
             painter.setOpacity(1.0)
 
+        painter.end()
+
+        self._base_pixmap = pm
+        self._base_pixmap_size = size
+        return pm
+
+    # -- mouse-driven sheen (cheap, partial-repaint only) ---------------------
+
+    def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        # Just record where the cursor is; the timer applies it at a fixed
+        # cadence so a fast mouse can't force more repaints than the
+        # throttle interval allows.
+        self._pending_mouse_pos = event.position()
+        if not self._move_timer.isActive():
+            self._move_timer.start()
+        super().mouseMoveEvent(event)
+
+    def _apply_pending_mouse_pos(self) -> None:
+        if self._pending_mouse_pos is None:
+            self._move_timer.stop()
+            return
+        old_pos = self._mouse_pos
+        self._mouse_pos = self._pending_mouse_pos
+        self._pending_mouse_pos = None
+        self._repaint_sheen_region(old_pos)
+        self._repaint_sheen_region(self._mouse_pos)
+
+    def _repaint_sheen_region(self, pos: QPointF | None) -> None:
+        if pos is None:
+            return
+        radius = 160
+        r = QRectF(
+            pos.x() - radius, pos.y() - radius, radius * 2, radius * 2
+        ).toAlignedRect()
+        self.update(r)
+
+    def enterEvent(self, event) -> None:  # noqa: N802
+        self._animate_sheen(1.0)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:  # noqa: N802
+        old_pos = self._mouse_pos
+        self._mouse_pos = None
+        self._pending_mouse_pos = None
+        self._move_timer.stop()
+        self._animate_sheen(0.0)
+        self._repaint_sheen_region(old_pos)
+        super().leaveEvent(event)
+
+    def _animate_sheen(self, target: float) -> None:
+        _safe_stop_anim(self._sheen_anim)
+        self._sheen_anim = None
+        anim = QVariantAnimation(self)
+        anim.setDuration(180)
+        anim.setStartValue(self._sheen_opacity)
+        anim.setEndValue(target)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        anim.valueChanged.connect(self._set_sheen_opacity)
+
+        def _clear() -> None:
+            if self._sheen_anim is anim:
+                self._sheen_anim = None
+
+        anim.finished.connect(_clear)
+        anim.start(QVariantAnimation.DeletionPolicy.DeleteWhenStopped)
+        self._sheen_anim = anim
+
+    def _set_sheen_opacity(self, value: object) -> None:
+        self._sheen_opacity = float(value)
+        self._repaint_sheen_region(self._mouse_pos)
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Blit the cached glass card — this is the whole fix: no gradient
+        # stroking or noise tiling happens per-frame anymore.
+        painter.drawPixmap(0, 0, self._ensure_base_pixmap())
+
         if self._sheen_opacity > 0.001 and self._mouse_pos is not None:
+            rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+            path = QPainterPath()
+            path.addRoundedRect(rect, _PANEL_RADIUS, _PANEL_RADIUS)
+            painter.setClipPath(path)
+
             sheen = QRadialGradient(self._mouse_pos, 160)
             sheen.setColorAt(0.0, QColor(255, 255, 255, int(55 * self._sheen_opacity)))
             sheen.setColorAt(1.0, QColor(255, 255, 255, 0))
@@ -568,6 +694,14 @@ class WelcomeScreen(QWidget):
         self._panel = _GlassPanel(self)
         self._panel.setFixedWidth(400)
         self._panel.setMouseTracking(True)
+
+        # Cheap opacity fade for the entrance (no blur — GPU-light, and
+        # QGraphicsOpacityEffect doesn't have the Windows softwarerender
+        # cost that QGraphicsBlurEffect does).
+        self._panel_opacity_effect = QGraphicsOpacityEffect(self._panel)
+        self._panel_opacity_effect.setOpacity(0.0)
+        self._panel.setGraphicsEffect(self._panel_opacity_effect)
+
         panel_layout = QVBoxLayout(self._panel)
         panel_layout.setContentsMargins(28, 24, 28, 22)
         panel_layout.setSpacing(0)
@@ -581,6 +715,7 @@ class WelcomeScreen(QWidget):
             pixel_size=13,
             weight=QFont.Weight.Normal,
             color=QColor(c.text_secondary),
+            max_width=340,
         )
         panel_layout.addWidget(self._support, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -650,29 +785,33 @@ class WelcomeScreen(QWidget):
             QTimer.singleShot(40, self._boot.start)
 
     def _play_panel_entrance(self) -> None:
-        """Slow slide + soft copy fade — no graphics blur."""
+        """Soft slide + fade — no overshoot scale."""
         self._panel.setVisible(True)
         self._panel.raise_()
 
         group = QParallelAnimationGroup(self)
 
         end_pos = self._panel.pos()
-        travel = 18
+        travel = 16
         self._panel.move(end_pos + QPoint(0, travel))
+        self._panel_opacity_effect.setOpacity(0.0)
+
         slide_anim = QVariantAnimation(self)
-        slide_anim.setDuration(700)
+        slide_anim.setDuration(560)
         slide_anim.setStartValue(0.0)
-        slide_anim.setEndValue(float(travel))
+        slide_anim.setEndValue(1.0)
         slide_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-        slide_anim.valueChanged.connect(
-            lambda v, end=end_pos, t=travel: self._panel.move(
-                end + QPoint(0, t - int(float(v)))
-            )
-        )
+
+        def _apply_slide(v: object, end=end_pos, t=travel) -> None:
+            progress = float(v)
+            self._panel.move(end + QPoint(0, int(round(t * (1.0 - progress)))))
+            self._panel_opacity_effect.setOpacity(max(0.0, min(1.0, progress)))
+
+        slide_anim.valueChanged.connect(_apply_slide)
         group.addAnimation(slide_anim)
 
         support_anim = QVariantAnimation(self)
-        support_anim.setDuration(640)
+        support_anim.setDuration(480)
         support_anim.setStartValue(0.0)
         support_anim.setEndValue(1.0)
         support_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -683,7 +822,7 @@ class WelcomeScreen(QWidget):
             self._cta.show()
             self._cta.setEnabled(True)
 
-        QTimer.singleShot(420, _show_cta)
+        QTimer.singleShot(320, _show_cta)
 
         self._anim_group = group
         group.start()

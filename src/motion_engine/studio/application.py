@@ -97,7 +97,7 @@ class StudioApplication:
             )
             self.app.processEvents()
         self.controller.start()
-        self.window.show()
+        self.window.showMaximized()
         if self.splash is not None:
             self.splash.finish(self.window)
             self.splash = None

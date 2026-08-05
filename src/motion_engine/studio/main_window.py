@@ -584,6 +584,9 @@ class MainWindow(QMainWindow):
             # Layout restore must not reveal docks on the welcome screen.
             if not self._dataset_open:
                 self._hide_side_docks()
+            # restoreGeometry often re-applies a previous non-maximized size —
+            # force fill-the-screen on every launch.
+            self.showMaximized()
         super().showEvent(event)
 
     def closeEvent(self, event) -> None:  # noqa: N802
