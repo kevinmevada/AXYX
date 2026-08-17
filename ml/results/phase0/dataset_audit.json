@@ -1,0 +1,952 @@
+{
+  "status": "PASS WITH WARNINGS",
+  "generated": "2026-08-13",
+  "dataset": {
+    "file": "C:/Users/mevad/Desktop/AXYS ML/data/processed/Data_structure_all_subs.mat",
+    "subjects": 31,
+    "subject_ids": [
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S7",
+      "S8",
+      "S9",
+      "S11",
+      "S12",
+      "S13",
+      "S14",
+      "S15",
+      "S17",
+      "S19",
+      "S23",
+      "S26",
+      "S27",
+      "S30",
+      "S31",
+      "S32",
+      "S34",
+      "S35",
+      "S37",
+      "S38",
+      "S39",
+      "S40",
+      "S41",
+      "S42",
+      "S43",
+      "S46",
+      "S48"
+    ],
+    "victimized": 17,
+    "non_victimized": 14,
+    "other_labels": 0,
+    "walking_trials": 260,
+    "valid_walking_trials": 242,
+    "sampling_rate_hz": 100,
+    "has_cohort_survey_table": true,
+    "variables": [
+      {
+        "name": "Dat",
+        "shape": [
+          1,
+          1
+        ],
+        "dtype": "struct"
+      },
+      {
+        "name": "__function_workspace__",
+        "shape": [
+          1,
+          13389592
+        ],
+        "dtype": "uint8"
+      }
+    ]
+  },
+  "raw": {
+    "file": "C:/Users/mevad/Desktop/AXYS ML/data/raw/Data_structure_all_subs.mat",
+    "subjects": 43,
+    "subject_ids": [
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "S8",
+      "S9",
+      "S10",
+      "S11",
+      "S12",
+      "S13",
+      "S14",
+      "S15",
+      "S17",
+      "S18",
+      "S19",
+      "S21",
+      "S22",
+      "S23",
+      "S25",
+      "S26",
+      "S27",
+      "S29",
+      "S30",
+      "S31",
+      "S32",
+      "S33",
+      "S34",
+      "S35",
+      "S36",
+      "S37",
+      "S38",
+      "S39",
+      "S40",
+      "S41",
+      "S42",
+      "S43",
+      "S45",
+      "S46",
+      "S47",
+      "S48",
+      "S50"
+    ],
+    "subjects_not_in_processed": [
+      "S6",
+      "S10",
+      "S18",
+      "S21",
+      "S22",
+      "S25",
+      "S29",
+      "S33",
+      "S36",
+      "S45",
+      "S47",
+      "S50"
+    ],
+    "variables": [
+      {
+        "name": "Dat",
+        "shape": [
+          1,
+          1
+        ],
+        "dtype": "struct"
+      },
+      {
+        "name": "__function_workspace__",
+        "shape": [
+          1,
+          14559256
+        ],
+        "dtype": "uint8"
+      }
+    ]
+  },
+  "survey": {
+    "file": "C:/Users/mevad/Desktop/AXYS ML/data/raw/Victimization surveys.xlsx",
+    "excel_rows": 50,
+    "excel_females": 31,
+    "excel_males": 12,
+    "join_key": "Subject No",
+    "join_ok": true,
+    "missing_in_mat": [],
+    "missing_in_excel": []
+  },
+  "signals": {
+    "markers": 37,
+    "joint_angles": 26,
+    "joint_centers": 6,
+    "com_signals": 2,
+    "segment_com_signals": 15,
+    "walking_kinematics_expected": 86,
+    "walking_kinematics_modal_observed": 86,
+    "marker_names": [
+      "LFHD",
+      "RFHD",
+      "LBHD",
+      "RBHD",
+      "C7",
+      "T10",
+      "CLAV",
+      "STRN",
+      "RBAK",
+      "LSHO",
+      "LUPA",
+      "LELB",
+      "LFRM",
+      "LWRA",
+      "LWRB",
+      "LFIN",
+      "RSHO",
+      "RUPA",
+      "RELB",
+      "RFRM",
+      "RWRA",
+      "RWRB",
+      "RFIN",
+      "LASI",
+      "RASI",
+      "LPSI",
+      "RPSI",
+      "LTHI",
+      "LKNE",
+      "LANK",
+      "LHEE",
+      "LTOE",
+      "RTHI",
+      "RKNE",
+      "RANK",
+      "RHEE",
+      "RTOE"
+    ],
+    "joint_center_names": [
+      "LHJC",
+      "RHJC",
+      "LKJC",
+      "RKJC",
+      "LAJC",
+      "RAJC"
+    ]
+  },
+  "events": {
+    "foot_contact": true,
+    "foot_off": true,
+    "mid_stance": true,
+    "detail": {
+      "KinFC": {
+        "available": true,
+        "walking_trials_with_event": 260,
+        "walking_trials": 260,
+        "status": "PASS"
+      },
+      "KinFO": {
+        "available": true,
+        "walking_trials_with_event": 260,
+        "walking_trials": 260,
+        "status": "PASS"
+      },
+      "Midsvnt": {
+        "available": true,
+        "walking_trials_with_event": 260,
+        "walking_trials": 260,
+        "status": "PASS"
+      }
+    }
+  },
+  "balance": {
+    "all": {
+      "min": 4,
+      "max": 12,
+      "median": 9.0,
+      "mean": 8.387096774193548,
+      "sum": 260
+    },
+    "victimized": {
+      "min": 4,
+      "max": 11,
+      "median": 9.0,
+      "mean": 8.411764705882353,
+      "sum": 143
+    },
+    "non_victimized": {
+      "min": 5,
+      "max": 12,
+      "median": 9.0,
+      "mean": 8.357142857142858,
+      "sum": 117
+    },
+    "per_subject": [
+      {
+        "subject_id": "S2",
+        "victimized": "N",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S3",
+        "victimized": "Y",
+        "walking_trials": 8
+      },
+      {
+        "subject_id": "S4",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S5",
+        "victimized": "Y",
+        "walking_trials": 8
+      },
+      {
+        "subject_id": "S7",
+        "victimized": "Y",
+        "walking_trials": 8
+      },
+      {
+        "subject_id": "S8",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S9",
+        "victimized": "N",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S11",
+        "victimized": "N",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S12",
+        "victimized": "N",
+        "walking_trials": 7
+      },
+      {
+        "subject_id": "S13",
+        "victimized": "Y",
+        "walking_trials": 5
+      },
+      {
+        "subject_id": "S14",
+        "victimized": "Y",
+        "walking_trials": 8
+      },
+      {
+        "subject_id": "S15",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S17",
+        "victimized": "N",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S19",
+        "victimized": "Y",
+        "walking_trials": 4
+      },
+      {
+        "subject_id": "S23",
+        "victimized": "N",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S26",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S27",
+        "victimized": "Y",
+        "walking_trials": 10
+      },
+      {
+        "subject_id": "S30",
+        "victimized": "N",
+        "walking_trials": 5
+      },
+      {
+        "subject_id": "S31",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S32",
+        "victimized": "Y",
+        "walking_trials": 11
+      },
+      {
+        "subject_id": "S34",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S35",
+        "victimized": "N",
+        "walking_trials": 12
+      },
+      {
+        "subject_id": "S37",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S38",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S39",
+        "victimized": "N",
+        "walking_trials": 10
+      },
+      {
+        "subject_id": "S40",
+        "victimized": "N",
+        "walking_trials": 8
+      },
+      {
+        "subject_id": "S41",
+        "victimized": "N",
+        "walking_trials": 8
+      },
+      {
+        "subject_id": "S42",
+        "victimized": "N",
+        "walking_trials": 6
+      },
+      {
+        "subject_id": "S43",
+        "victimized": "N",
+        "walking_trials": 6
+      },
+      {
+        "subject_id": "S46",
+        "victimized": "Y",
+        "walking_trials": 9
+      },
+      {
+        "subject_id": "S48",
+        "victimized": "N",
+        "walking_trials": 10
+      }
+    ]
+  },
+  "checks": {
+    "subject_count": "PASS",
+    "label_split": "PASS",
+    "join": "PASS",
+    "sampling_rate": "PASS",
+    "walking_trials": "PASS",
+    "walking_signal_count": "PASS",
+    "events_KinFC": "PASS",
+    "events_KinFO": "PASS",
+    "events_Midsvnt": "PASS",
+    "raw_mat_present": "PASS",
+    "survey_excel_present": "PASS",
+    "survey_table_present": "PASS"
+  },
+  "irregularities": [
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S3.WU01.LUPA finite_ratio=0.2596 missing=693"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "WU02",
+      "code": "nan_values",
+      "message": "S3.WU02.LUPA finite_ratio=0.6923 missing=264"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "WU03",
+      "code": "nan_values",
+      "message": "S3.WU03.LUPA finite_ratio=0.4111 missing=507"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "WU05",
+      "code": "nan_values",
+      "message": "S3.WU05.LUPA finite_ratio=0.5418 missing=444"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "WU06",
+      "code": "nan_values",
+      "message": "S3.WU06.RUPA finite_ratio=0.9893 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "WU06",
+      "code": "nan_values",
+      "message": "S3.WU06.LUPA finite_ratio=0.2500 missing=630"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "WU07",
+      "code": "nan_values",
+      "message": "S3.WU07.LUPA finite_ratio=0.6781 missing=366"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S3.static.LBHD finite_ratio=0.2700 missing=219"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S3.static.RNeckAngles finite_ratio=0.2700 missing=219"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S3.static.LNeckAngles finite_ratio=0.2700 missing=219"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S3.static.RHeadAngles finite_ratio=0.2700 missing=219"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S3",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S3.static.LHeadAngles finite_ratio=0.2700 missing=219"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S7",
+      "session": "WU02",
+      "code": "nan_values",
+      "message": "S7.WU02.LUPA finite_ratio=0.5686 missing=330"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S7",
+      "session": "WU03",
+      "code": "nan_values",
+      "message": "S7.WU03.LUPA finite_ratio=0.9030 missing=78"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S8",
+      "session": "WU07",
+      "code": "nan_values",
+      "message": "S8.WU07.RUPA finite_ratio=0.8419 missing=129"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.C7 finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.RNeckAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.LNeckAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.RSpineAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.LSpineAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.LShoulderAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.LElbowAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.LWristAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.RShoulderAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.RElbowAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.RWristAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.RThoraxAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S11",
+      "session": "static",
+      "code": "nan_values",
+      "message": "S11.static.LThoraxAngles finite_ratio=0.3377 missing=153"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LTHI finite_ratio=0.9885 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LHipAngles finite_ratio=0.9885 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LKneeAngles finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LAbsAnkleAngle finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LAnkleAngles finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LFootProgressAngles finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LKJC finite_ratio=0.9885 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LAJC finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LeftFemurCOM finite_ratio=0.9885 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LeftTibiaCOM finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.LeftFootCOM finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.CentreOfMass finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "WK04Copy",
+      "code": "nan_values",
+      "message": "S12.WK04Copy.CentreOfMassFloor finite_ratio=0.9466 missing=42"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "staticCopy",
+      "code": "nan_values",
+      "message": "S12.staticCopy.LSHO finite_ratio=0.1400 missing=258"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "staticCopy",
+      "code": "nan_values",
+      "message": "S12.staticCopy.LUPA finite_ratio=0.0600 missing=282"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "staticCopy",
+      "code": "nan_values",
+      "message": "S12.staticCopy.LShoulderAngles finite_ratio=0.1400 missing=258"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "staticCopy",
+      "code": "nan_values",
+      "message": "S12.staticCopy.LElbowAngles finite_ratio=0.1400 missing=258"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": "staticCopy",
+      "code": "nan_values",
+      "message": "S12.staticCopy.LWristAngles finite_ratio=0.1400 missing=258"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S12",
+      "session": null,
+      "code": "irregular_session_names",
+      "message": "S12 non-canonical session names: WK01Copy, WK02Copy, WK04Copy, WK05Copy, WK06Copy, WK07Copy, WK08Copy, WK09Copy, WK10Copy, WK11Copy, WU01Copy, WU02Copy, WU03Copy, WU04Copy, WU05Copy, WU07Copy, WU08Copy, staticCopy"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.LKneeAngles finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.LAbsAnkleAngle finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.LAnkleAngles finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.LFootProgressAngles finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.CentreOfMass finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.CentreOfMassFloor finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.LAJC finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.LeftTibiaCOM finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S14",
+      "session": "WU01",
+      "code": "nan_values",
+      "message": "S14.WU01.LeftFootCOM finite_ratio=0.9368 missing=54"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S17",
+      "session": null,
+      "code": "irregular_session_names",
+      "message": "S17 non-canonical session names: WU0, WU3, WU4, WU5, WU6, WU7, WU9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S19",
+      "session": "WU03",
+      "code": "nan_values",
+      "message": "S19.WU03.RFRM finite_ratio=0.2188 missing=525"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S30",
+      "session": "WU02",
+      "code": "missing_markers",
+      "message": "S30.WU02 missing markers ['LUPA']"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S30",
+      "session": "WU02",
+      "code": "unexpected_signal_count",
+      "message": "S30.WU02 has 85 kinematics fields, expected 86"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S30",
+      "session": "WU05",
+      "code": "missing_markers",
+      "message": "S30.WU05 missing markers ['LUPA']"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S30",
+      "session": "WU05",
+      "code": "unexpected_signal_count",
+      "message": "S30.WU05 has 85 kinematics fields, expected 86"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S30",
+      "session": "WU06",
+      "code": "missing_markers",
+      "message": "S30.WU06 missing markers ['LUPA']"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S30",
+      "session": "WU06",
+      "code": "unexpected_signal_count",
+      "message": "S30.WU06 has 85 kinematics fields, expected 86"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S30",
+      "session": "WU07",
+      "code": "missing_markers",
+      "message": "S30.WU07 missing markers ['LUPA']"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S30",
+      "session": "WU07",
+      "code": "unexpected_signal_count",
+      "message": "S30.WU07 has 85 kinematics fields, expected 86"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S32",
+      "session": "WU03",
+      "code": "nan_values",
+      "message": "S32.WU03.LFIN finite_ratio=0.9831 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S32",
+      "session": "WU03",
+      "code": "nan_values",
+      "message": "S32.WU03.LWristAngles finite_ratio=0.9831 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S32",
+      "session": "WU03",
+      "code": "nan_values",
+      "message": "S32.WU03.CentreOfMass finite_ratio=0.9831 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S32",
+      "session": "WU03",
+      "code": "nan_values",
+      "message": "S32.WU03.CentreOfMassFloor finite_ratio=0.9831 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S32",
+      "session": "WU03",
+      "code": "nan_values",
+      "message": "S32.WU03.LeftHandCOM finite_ratio=0.9831 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S40",
+      "session": "WU04",
+      "code": "nan_values",
+      "message": "S40.WU04.LUPA finite_ratio=0.9892 missing=9"
+    },
+    {
+      "level": "warning",
+      "subject_id": "S43",
+      "session": "WU02",
+      "code": "nan_values",
+      "message": "S43.WU02.RUPA finite_ratio=0.9706 missing=21"
+    },
+    {
+      "level": "warning",
+      "subject_id": null,
+      "session": null,
+      "code": "trial_imbalance",
+      "message": "Walking trials per subject range 4\u201312 (median 9.0)"
+    }
+  ]
+}

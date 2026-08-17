@@ -1,0 +1,10 @@
+{
+  "k": null,
+  "method": "hierarchical",
+  "reason": "no_stable_phenotype_structure",
+  "criteria": {
+    "min_cluster_size": 4,
+    "min_silhouette": 0.2,
+    "min_mean_boot_ari": 0.5
+  }
+}

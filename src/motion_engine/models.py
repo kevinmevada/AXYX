@@ -683,13 +683,17 @@ class Subject:
 
     Attributes:
         id: Stable subject ID (e.g. ``S2``).
-        metadata: Subject-level ``Info`` fields.
+        metadata: Subject-level ``Info`` fields (anthropometrics / rates only).
         sessions: Mapping of original session name → :class:`Session`.
+        survey: Optional survey / questionnaire record (ML track). Not part of
+            MATLAB ``Info`` — attached by ``ml.datasets`` merger, never mixed
+            into :class:`Metadata`.
     """
 
     id: SubjectId
     metadata: Metadata = field(default_factory=Metadata)
     sessions: dict[SessionName, Session] = field(default_factory=dict)
+    survey: Any | None = None
 
     def __post_init__(self) -> None:
         self.validate().raise_if_errors()
@@ -719,6 +723,10 @@ class Subject:
             if session.classification == classification
         ]
 
+    def walking_sessions(self) -> list[Session]:
+        """Return sessions classified as Walking (labels only, names unchanged)."""
+        return self.sessions_by_class("Walking")
+
     def add_session(self, session: Session) -> None:
         """Attach a session, enforcing subject ID consistency."""
         if session.subject_id != self.id:
@@ -740,7 +748,7 @@ class Subject:
             class_counts[session.classification] = (
                 class_counts.get(session.classification, 0) + 1
             )
-        return {
+        out: dict[str, Any] = {
             "subject_id": self.id,
             "session_count": len(self.sessions),
             "classifications": class_counts,
@@ -752,7 +760,9 @@ class Subject:
                 "mass": self.metadata.mass,
                 "height": self.metadata.height,
             },
+            "has_survey": self.survey is not None,
         }
+        return out
 
     def validate(self) -> ValidationReport:
         """Validate subject identity and nested sessions/metadata."""
@@ -774,7 +784,11 @@ class Subject:
         return report
 
     def __repr__(self) -> str:
-        return f"Subject(id={self.id!r}, sessions={len(self.sessions)})"
+        survey_flag = "survey" if self.survey is not None else "no-survey"
+        return (
+            f"Subject(id={self.id!r}, sessions={len(self.sessions)}, "
+            f"{survey_flag})"
+        )
 
 
 @dataclass(slots=True)

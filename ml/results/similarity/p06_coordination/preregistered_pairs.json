@@ -1,0 +1,27 @@
+{
+  "analysis": "P0.6_coordination_continuous_relative_phase",
+  "preregistered_before_any_real_test": true,
+  "locked_date": "2026-08-17",
+  "n_pairs": 6,
+  "axis": "ax1",
+  "source": "Phase 1 normalized_core.npz angle curves (101-pt). Angular velocity is NOT stored; Hilbert phase uses the analytic signal of the demeaned angle and does not require an explicit velocity channel.",
+  "crp_method": "hilbert_analytic_phase",
+  "crp_method_rationale": "Instantaneous phase from the Hilbert analytic signal of the demeaned joint-angle time series (Lamb & Stöckl / Hamill CRP tradition). Preferred over atan2(ω, θ) phase-plane because the latter requires separate normalization of position and velocity and is sensitive to those choices; Hilbert phase is uniquely defined for a demeaned real signal without an extra velocity scale.",
+  "velocity_audit": "Phase 1 stores position-like angle trajectories only (no KinAngVel). Finite-difference/SG velocity can be derived (Phase 2 does for features) but is unused for Hilbert CRP.",
+  "subject_summary": "Per cycle CRP on 101-pt grid; subject profile = circular mean across cycles (atan2 of mean sin/cos). Primary similarity = mean_t cos(CRP_i - CRP_j) (circular; preserves constant phase offsets that z-scored Pearson would destroy). Companion = DTW on unwrap(CRP-CRP[0]) for time-varying coupling shape.",
+  "primary_statistics": [
+    "mean_over_pairs_of_mean_pairwise_circular_similarity_among_victims",
+    "mean_over_pairs_of_mean_pairwise_dtw_on_unwrapped_crp_among_victims"
+  ],
+  "fdr_family": "6_pairs × 2_measures = 12",
+  "n_fdr_family": 12,
+  "unit": "subject",
+  "pairs": [
+    {"id": "left_hip_knee", "proximal": "LHipAngles", "distal": "LKneeAngles", "side": "L", "family": "hip_knee"},
+    {"id": "right_hip_knee", "proximal": "RHipAngles", "distal": "RKneeAngles", "side": "R", "family": "hip_knee"},
+    {"id": "left_knee_ankle", "proximal": "LKneeAngles", "distal": "LAnkleAngles", "side": "L", "family": "knee_ankle"},
+    {"id": "right_knee_ankle", "proximal": "RKneeAngles", "distal": "RAnkleAngles", "side": "R", "family": "knee_ankle"},
+    {"id": "left_hip_ankle", "proximal": "LHipAngles", "distal": "LAnkleAngles", "side": "L", "family": "hip_ankle"},
+    {"id": "right_hip_ankle", "proximal": "RHipAngles", "distal": "RAnkleAngles", "side": "R", "family": "hip_ankle"}
+  ]
+}

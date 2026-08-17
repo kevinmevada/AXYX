@@ -1,0 +1,17 @@
+phenotype,feature,n_in,n_out,median_in,median_out,cliffs_delta,cliffs_magnitude,direction,family,anatomical_region,side,source_signal,abs_delta,rank_in_phenotype
+1,RKneeAngles_ax1_tmin_pct__median,27,4,50.0,93.75,-1.0,large,LOWER_IN_PHENOTYPE,kinematic,knee,right,RKneeAngles,1.0,1
+1,LASI_ax3_excursion__median,27,4,48.60888671875,56.727569580078125,-0.9074074074074074,large,LOWER_IN_PHENOTYPE,spatial,pelvis,left,LASI,0.9074074074074074,2
+1,LPSI_ax3_excursion__median,27,4,46.6502685546875,57.60284423828125,-0.8333333333333334,large,LOWER_IN_PHENOTYPE,spatial,pelvis,left,LPSI,0.8333333333333334,3
+1,LKneeAngles_ax1_tmin_pct__median,27,4,50.0,46.5,0.7777777777777778,large,HIGHER_IN_PHENOTYPE,kinematic,knee,left,LKneeAngles,0.7777777777777778,4
+1,RHipAngles_ax3_rom__median,27,4,19.339293956756592,27.536627769470215,-0.7222222222222222,large,LOWER_IN_PHENOTYPE,kinematic,hip,right,RHipAngles,0.7222222222222222,5
+1,LKneeAngles_ax2_tmin_pct__median,27,4,50.0,64.0,-0.6851851851851852,large,LOWER_IN_PHENOTYPE,kinematic,knee,left,LKneeAngles,0.6851851851851852,6
+1,RFootProgressAngles_ax2_min__median,27,4,-3.0443007946014404,-7.103898882865906,0.6851851851851852,large,HIGHER_IN_PHENOTYPE,kinematic,foot,right,RFootProgressAngles,0.6851851851851852,7
+1,RKneeAngles_ax1_phase_20_30_rom__median,27,4,6.045631408691406,7.369823455810547,-0.6851851851851852,large,LOWER_IN_PHENOTYPE,phase,knee,right,RKneeAngles,0.6851851851851852,8
+2,RKneeAngles_ax1_tmin_pct__median,4,27,93.75,50.0,1.0,large,HIGHER_IN_PHENOTYPE,kinematic,knee,right,RKneeAngles,1.0,1
+2,LASI_ax3_excursion__median,4,27,56.727569580078125,48.60888671875,0.9074074074074074,large,HIGHER_IN_PHENOTYPE,spatial,pelvis,left,LASI,0.9074074074074074,2
+2,LPSI_ax3_excursion__median,4,27,57.60284423828125,46.6502685546875,0.8333333333333334,large,HIGHER_IN_PHENOTYPE,spatial,pelvis,left,LPSI,0.8333333333333334,3
+2,LKneeAngles_ax1_tmin_pct__median,4,27,46.5,50.0,-0.7777777777777778,large,LOWER_IN_PHENOTYPE,kinematic,knee,left,LKneeAngles,0.7777777777777778,4
+2,RHipAngles_ax3_rom__median,4,27,27.536627769470215,19.339293956756592,0.7222222222222222,large,HIGHER_IN_PHENOTYPE,kinematic,hip,right,RHipAngles,0.7222222222222222,5
+2,LKneeAngles_ax2_tmin_pct__median,4,27,64.0,50.0,0.6851851851851852,large,HIGHER_IN_PHENOTYPE,kinematic,knee,left,LKneeAngles,0.6851851851851852,6
+2,RFootProgressAngles_ax2_min__median,4,27,-7.103898882865906,-3.0443007946014404,-0.6851851851851852,large,LOWER_IN_PHENOTYPE,kinematic,foot,right,RFootProgressAngles,0.6851851851851852,7
+2,RKneeAngles_ax1_phase_20_30_rom__median,4,27,7.369823455810547,6.045631408691406,0.6851851851851852,large,HIGHER_IN_PHENOTYPE,phase,knee,right,RKneeAngles,0.6851851851851852,8

@@ -1,0 +1,61 @@
+{
+  "generated": "2026-08-13",
+  "status": "PASS WITH WARNINGS",
+  "checks": [
+    {
+      "name": "n_victims_17",
+      "status": "PASS",
+      "detail": "n_victims=17"
+    },
+    {
+      "name": "n_controls_14",
+      "status": "PASS",
+      "detail": "n_controls=14"
+    },
+    {
+      "name": "n_subjects_31",
+      "status": "PASS",
+      "detail": "subject-level representation"
+    },
+    {
+      "name": "perm_unit_subject",
+      "status": "PASS",
+      "detail": "similarity permutation unit=subject"
+    },
+    {
+      "name": "nn_perm_unit_subject",
+      "status": "PASS",
+      "detail": "NN permutation unit=subject"
+    },
+    {
+      "name": "assignments_no_label_col",
+      "status": "PASS",
+      "detail": "assignment table has no victimized column"
+    },
+    {
+      "name": "representation_gait_only",
+      "status": "PASS",
+      "detail": "compact gait matrix has no label columns"
+    },
+    {
+      "name": "similarity_p_present",
+      "status": "PASS",
+      "detail": "within-victim p reported"
+    },
+    {
+      "name": "honest_no_subgroup",
+      "status": "WARNING",
+      "detail": "no stable victim subgroup forced"
+    }
+  ],
+  "choice": {
+    "k": null,
+    "method": "hierarchical",
+    "reason": "no_stable_phenotype_structure",
+    "criteria": {
+      "min_cluster_size": 4,
+      "min_silhouette": 0.2,
+      "min_mean_boot_ari": 0.5
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "generated": "2026-08-13",
+  "status": "PASS WITH WARNINGS",
+  "checks": [
+    {
+      "name": "n_subjects_31",
+      "status": "PASS",
+      "detail": "n=31"
+    },
+    {
+      "name": "groups_17_14",
+      "status": "PASS",
+      "detail": "Y=17 N=14"
+    },
+    {
+      "name": "fdr_present",
+      "status": "PASS",
+      "detail": "BH q-values present"
+    },
+    {
+      "name": "effect_sizes_present",
+      "status": "PASS",
+      "detail": "Cliff's delta present"
+    },
+    {
+      "name": "loso_present",
+      "status": "PASS",
+      "detail": "LOSO table aligned to representatives"
+    },
+    {
+      "name": "perm_subject_unit",
+      "status": "PASS",
+      "detail": "permutation unit=subject"
+    },
+    {
+      "name": "direction_explicit",
+      "status": "PASS",
+      "detail": "direction labels present"
+    },
+    {
+      "name": "anatomy_traced",
+      "status": "PASS",
+      "detail": "catalog anatomy attached"
+    },
+    {
+      "name": "no_cycle_as_subject",
+      "status": "PASS",
+      "detail": "comparisons are subject-level"
+    },
+    {
+      "name": "screening_rejects_labels",
+      "status": "PASS",
+      "detail": "quality_screen raises if victimized present"
+    },
+    {
+      "name": "no_manufactured_signature",
+      "status": "WARNING",
+      "detail": "signature_rule hits=0; exploratory ranks are not claimed as a confirmed signature"
+    }
+  ],
+  "n_signature": 0
+}

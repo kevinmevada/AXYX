@@ -1,89 +1,115 @@
 # AXYX
 
-**AXYX** is a research platform for clinical gait motion capture: ingest Vicon-style MATLAB sessions, reconstruct a full-body skeleton from markers, and visualize playback as a metallic procedural stick figure in a scientific 3D viewport.
+Research platform for **clinical gait** motion capture: ingest Vicon-style MATLAB sessions, reconstruct a full-body skeleton, play it in **AXYX Studio**, and run a certified **ML research pipeline** on the same cohort.
 
 | | |
 |---|---|
-| **Project** | AXYX |
-| **Domain** | Biomechanics · clinical gait · scientific visualization |
-| **Core library** | `motion_engine` (Python 3.11) |
-| **Desktop app** | AXYX Studio (PySide6 + PyVista) |
-| **Suggested Git remote** | `axyx` |
+| **Library** | `motion_engine` · Python 3.11 |
+| **App** | AXYX Studio (PySide6 + PyVista) |
+| **Studio dataset** | `data/processed/Data_structure_filtered.mat` · 31 subjects · ~301 sessions |
+| **ML dataset** | `data/processed/Data_structure_all_subs.mat` · 31 females · survey-joined |
+| **Repo** | [kevinmevada/AXYX](https://github.com/kevinmevada/AXYX) |
 
 ---
 
-## Research goals
+## What we are doing
 
-1. **Reproducible reconstruction** — marker → joint → bone graph driven by YAML, not ad-hoc scripts  
-2. **Data fidelity** — joint positions and bone lengths derived only from the dataset  
-3. **Interactive analysis** — subject/session browser, timeline playback, studio viewport  
-4. **Digital twin runtime** — avatar skeleton, skinning (M4), animation (M5), motion retargeting (M6), unified platform runtime (M7)  
+Two tracks share the same capture lab but different questions:
 
----
+| Track | Question | Entry |
+|---|---|---|
+| **Studio** | Can we reconstruct and **visualize** Plug-in Gait trials interactively? | `run_axyx.py` → open `.mat` |
+| **ML research** | Do victimized vs non-victimized females show a **shared, robust gait difference** (Phases 0–6 + Similarity P0)? | [`ml/README.md`](ml/README.md) |
 
-## Repository layout
+Studio uses `MotionDatabase` as the typed object graph (`motion_engine`). The ML track uses `gait_research` under `ml/src/` — audit → cycles → features → statistics → phenotypes → trajectories → similarity tests. **Neither track trains a victim classifier** on this *n* = 31 sample.
 
-```
-axyx/                          # git repo name (folder may still be V_ locally)
-│
-├── README.md                  # this file
-├── CITATION.cff               # citation metadata
-├── pyproject.toml             # project metadata
-├── pytest.ini
-├── run_axyx.bat / run_axyx.py # launch Studio
-├── run_viewer.bat             # standalone viewer
-│
-├── config/                    # experiment & reconstruction configs (YAML)
-│   ├── skeleton_definition.yaml
-│   ├── bone_constraints.yaml
-│   ├── coordinate_system.yaml
-│   └── subject_cohorts.yaml …
-│
-├── data/
-│   ├── raw/                   # original MATLAB captures
-│   └── processed/             # filtered working dataset
-│
-├── metadata/                  # catalogs, filter reports
-├── notebooks/                 # exploratory analysis
-├── docs/                      # design notes & figures
-├── experiments/               # one-off research trials
-├── results/                   # figures, exports, run outputs
-│   ├── figures/
-│   └── exports/
-│
-├── scripts/                   # dataset inspect / filter / validate
-├── src/
-│   └── motion_engine/         # core SDK + Studio UI
-├── tests/
-└── venv311/                   # Python 3.11 environment (not committed)
-```
+**ML bottom line (certified):** no robust victim-associated shared gait signature after FDR, LOSO, trajectory tests, and the full P0 similarity battery. Details: [`ml/results/similarity/p0_synthesis.md`](ml/results/similarity/p0_synthesis.md).
 
 ---
 
-## Method (end-to-end)
+## How it works
+
+### Studio visualization
 
 ```
-MATLAB (.mat)
-    → DatasetLoader / parser
-    → MotionDatabase (subjects, sessions, markers, joint centers)
+.mat  (top-level Dat)
+    → MotionDatabaseLoader
+    → MotionDatabase → Subject → sessions.kinematics
     → SkeletonBuilder  [config/skeleton_definition.yaml]
     → Skeleton + AnimationClip
     → AXYX Studio viewport (PyVista)
 ```
 
-**Bone length** between parent joint **A** and child joint **B**:
+### ML research pipeline
 
-```text
-‖ B − A ‖₂   (Euclidean, per frame; mean over valid frames)
+```
+data/raw MAT + Victimization surveys.xlsx
+    → Phase 0 audit
+    → Phase 1 gait cycles (880 × 101 points)
+    → Phase 2 features (label-blind)
+    → Phases 3–6 group stats, phenotypes, within-victim structure, trajectories
+    → Similarity P0.1–P0.6 (shared-pattern discovery)
+    → ml/results/
 ```
 
-Joints are resolved from joint centers when available, otherwise from marker centroids (e.g. pelvis from LASI/RASI/LPSI/RPSI). No invented marker positions.
+Run commands and phase docs: **[`ml/README.md`](ml/README.md)**.
+
+---
+
+## Data required for visualization (Studio)
+
+Studio **only loads MATLAB `.mat`** with the `Dat` hierarchy. Welcome may list `.c3d` / `.trc` / `.npz`; those are **not parsed yet**.
+
+```text
+data/processed/Data_structure_filtered.mat
+```
+
+| Requirement | Detail |
+|---|---|
+| Top-level key | **`Dat`** (required) |
+| Subjects | `Dat.S2`, `Dat.S11`, … |
+| Per subject | `Info` + `New_Session` |
+| Per trial | `kinematics` struct, 2D XYZ arrays `(N, 3)` or `(3, N)` |
+
+```text
+.mat
+└── Dat
+      └── S2
+            ├── Info                 Mass, Height, Vrate, FPrate, leg lengths
+            └── New_Session
+                  └── WU01
+                        └── kinematics   LASI, LHJC, LKneeAngles, …
+```
+
+### Stick figure needs (Plug-in Gait names)
+
+Pelvis: `LASI` `RASI` `LPSI` `RPSI` · Hips: `LHJC`/`RHJC` · Knees: `LKNE`/`RKNE` · Ankles: `LANK`/`RANK` · plus trunk/head/arm markers per [`config/skeleton_definition.yaml`](config/skeleton_definition.yaml).
+
+`Info` supplies mass, height, rates. Age, sex, victimization live in **survey Excel** (`data/raw/Victimization surveys.xlsx`) — used by ML, not required for 3D playback.
+
+### Will not visualize
+
+CSV/Excel kinematics, C3D/TRC/NPZ, wrong marker names, or arrays without a size-3 XYZ axis.
+
+---
+
+## Data required for ML (research track)
+
+Place under repo **`data/`** (shared, not inside `ml/`):
+
+| File | Role |
+|---|---|
+| `data/raw/Data_structure_all_subs.mat` | Original 43-subject capture |
+| `data/raw/Victimization surveys.xlsx` | Labels — join on **`Subject No`** ↔ `Dat.S{n}` |
+| `data/processed/Data_structure_all_subs.mat` | 31-female working MAT with survey joined |
+
+Same `.mat` contract as Studio (`Dat → S# → New_Session → kinematics`). ML phases read MATLAB once, then work from `ml/results/` (npz, parquet, csv).
 
 ---
 
 ## Quick start
 
-Requires **Python 3.11** (`venv311`) with PySide6, PyVista, NumPy, SciPy.
+### Studio
 
 ```bat
 .\run_axyx.bat
@@ -93,21 +119,23 @@ Or:
 
 ```bat
 set PYTHONPATH=src
-set QT_API=pyside6
+set QT_QPA_PLATFORM=windows
 venv311\Scripts\python.exe run_axyx.py
 ```
 
-1. Open a processed dataset  
-2. Select subject → session in Explorer  
-3. Inspect / play motion in the viewport  
+Open `data/processed/Data_structure_filtered.mat` → pick subject → session → play.
 
-Standalone viewer:
+### ML (smoke test)
 
 ```bat
-.\run_viewer.bat
+venv311\Scripts\python.exe ml\scripts\audit_dataset.py
+set PYTHONPATH=ml\src
+venv311\Scripts\python.exe -m pytest ml\tests\similarity -q
 ```
 
-Tests:
+Install extras if needed: `pip install pyarrow matplotlib tqdm openpyxl numba`
+
+### Tests (motion engine)
 
 ```bat
 set PYTHONPATH=src
@@ -116,27 +144,49 @@ venv311\Scripts\python.exe -m pytest tests -q
 
 ---
 
-## Software stack
+## Repository layout
+
+```
+AXYX/
+├── data/raw/                 captures + survey Excel
+├── data/processed/           filtered .mat (Studio + ML)
+├── config/                   skeleton YAML (Studio)
+├── metadata/motion_catalog/  variable catalog
+├── ml/                       ★ ML research (Phases 0–6 + Similarity P0)
+│   ├── README.md             full methods + results index
+│   ├── scripts/              phase runners
+│   ├── src/gait_research/    analysis library
+│   ├── tests/
+│   └── results/              certified outputs
+├── src/motion_engine/        SDK + AXYX Studio
+├── docs/                     architecture specs
+├── tests/                    motion_engine tests
+└── run_axyx.py
+```
+
+---
+
+## Stack
 
 | Component | Role |
-|-----------|------|
-| `motion_engine` | Domain models, MATLAB I/O, skeleton, animation, camera, renderer |
-| AXYX Studio | Research UI — Explorer · Viewport · Timeline |
-| PyVista / VTK | Real-time 3D scientific visualization |
-| YAML configs | Skeleton topology and constraints |
+|---|---|
+| `motion_engine` | MATLAB I/O, `MotionDatabase`, skeleton, Studio UI |
+| `gait_research` (`ml/src/`) | Gait-cycle extraction, features, statistics, similarity |
+| PyVista / VTK | 3D visualization |
+| YAML | Skeleton topology |
 
 ---
 
 ## Citing
 
-If you use AXYX in academic work, please cite this repository (see `CITATION.cff`).
+See `CITATION.cff`.
 
 ```bibtex
 @software{axyx,
-  title        = {AXYX: Clinical Gait Motion Research Platform},
-  author       = {{AXYX Contributors}},
-  year         = {2026},
-  url          = {https://github.com/<org>/axyx}
+  title  = {AXYX: Clinical Gait Motion Research Platform},
+  author = {{AXYX Contributors}},
+  year   = {2026},
+  url    = {https://github.com/kevinmevada/AXYX}
 }
 ```
 
@@ -144,7 +194,6 @@ If you use AXYX in academic work, please cite this repository (see `CITATION.cff
 
 ## Status
 
-Active research / engineering prototype. Viewport and Studio UI are demonstration-ready.
-
----
-
+- **Studio:** demonstration-ready for Plug-in Gait `.mat` catalogs in the `Dat` shape above.
+- **ML:** Phases 0–6 and Similarity P0 **complete / certified**; P1 and predictive modeling **not started**.
+- C3D/TRC ingest and SceneGraph-driven renderer: not done.

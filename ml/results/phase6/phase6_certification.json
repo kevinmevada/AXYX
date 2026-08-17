@@ -1,0 +1,52 @@
+{
+  "generated": "2026-08-13",
+  "status": "PASS WITH WARNINGS",
+  "checks": [
+    {
+      "name": "n_subjects_31",
+      "status": "PASS",
+      "detail": "subject-level n=31"
+    },
+    {
+      "name": "n_time_101",
+      "status": "PASS",
+      "detail": "101-point cycles"
+    },
+    {
+      "name": "not_880",
+      "status": "PASS",
+      "detail": "cycles are repeated measures"
+    },
+    {
+      "name": "primary_predefined",
+      "status": "PASS",
+      "detail": "frozen primary set"
+    },
+    {
+      "name": "perm_unit",
+      "status": "PASS",
+      "detail": "cluster permutation shuffles subject labels"
+    },
+    {
+      "name": "no_zero_fill",
+      "status": "PASS",
+      "detail": "no silent zeros"
+    },
+    {
+      "name": "shape_present",
+      "status": "PASS",
+      "detail": "shape analysis ran"
+    },
+    {
+      "name": "axes_not_anatomical",
+      "status": "PASS",
+      "detail": "ax1/ax2/ax3 retained"
+    },
+    {
+      "name": "honest_null_allowed",
+      "status": "WARNING",
+      "detail": "robust_findings=0"
+    }
+  ],
+  "n_robust": 0
+}

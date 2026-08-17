@@ -1,0 +1,2 @@
+n_group,n_pool,observed_mean_pairwise_distance,null_mean,null_sd,null_p05,null_p95,perm_p,n_perm,unit,alternative,mean_pairwise_victim_victim,mean_pairwise_control_control,mean_pairwise_victim_control
+17,31,20.41683891912052,20.06005494755659,2.4785971272835554,15.845444901593474,24.145583593455807,0.547,999,subject,group_more_similar_than_random_same_size,20.41683891912052,20.0157339007024,19.75387534385816

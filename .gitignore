@@ -72,3 +72,13 @@ results/exports/*
 !results/exports/.gitkeep
 results/figures/*
 !results/figures/.gitkeep
+
+# ML weights / run outputs (keep folder structure)
+ml/checkpoints/**
+!ml/checkpoints/.gitkeep
+ml/artifacts/**
+!ml/artifacts/.gitkeep
+
+# ML large binaries stay local when regenerated (tracked results may be committed)
+ml/results/**/*.npz
+ml/results/**/*.parquet

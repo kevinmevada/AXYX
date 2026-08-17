@@ -1,0 +1,41 @@
+{
+  "raw": {
+    "representation": "event_phase_windows",
+    "n_subjects": 31,
+    "n_victims": 17,
+    "n_controls": 14,
+    "n_phases": 5,
+    "n_curves": 12,
+    "n_aggregations": 2,
+    "n_fdr_family": 240,
+    "n_fdr_le_0_10": 0,
+    "n_fdr_le_0_05": 0,
+    "min_perm_p": 0.0279,
+    "residualized": false,
+    "residual_covariates": [],
+    "n_perm": 9999,
+    "seed": 20260813
+  },
+  "residualized": {
+    "representation": "event_phase_windows_residualized",
+    "n_subjects": 31,
+    "n_victims": 17,
+    "n_controls": 14,
+    "n_phases": 5,
+    "n_curves": 12,
+    "n_aggregations": 2,
+    "n_fdr_family": 240,
+    "n_fdr_le_0_10": 0,
+    "n_fdr_le_0_05": 0,
+    "min_perm_p": 0.0188,
+    "residualized": true,
+    "residual_covariates": [
+      "height_cm",
+      "mass_kg",
+      "mean_leg_cm",
+      "cycle_duration_s_median"
+    ],
+    "n_perm": 9999,
+    "seed": 20260813
+  }
+}

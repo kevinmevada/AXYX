@@ -1,0 +1,94 @@
+{
+  "generated": "2026-08-13",
+  "status": "PASS WITH WARNINGS",
+  "checks": [
+    {
+      "name": "n_subjects_31",
+      "status": "PASS",
+      "detail": "n=31"
+    },
+    {
+      "name": "assignments_have_no_labels",
+      "status": "PASS",
+      "detail": "assignment table is label-free"
+    },
+    {
+      "name": "representation_label_free",
+      "status": "PASS",
+      "detail": "compact matrix has no label columns"
+    },
+    {
+      "name": "pca_present",
+      "status": "PASS",
+      "detail": "PCA summary written"
+    },
+    {
+      "name": "cluster_metrics_present",
+      "status": "PASS",
+      "detail": "k grid evaluated"
+    },
+    {
+      "name": "stability_subject_unit",
+      "status": "PASS",
+      "detail": "stability unit=subject"
+    },
+    {
+      "name": "k_not_from_labels",
+      "status": "PASS",
+      "detail": "selection payload has no victim criterion"
+    },
+    {
+      "name": "sensitivity_present",
+      "status": "PASS",
+      "detail": "algorithm/representation ARI table"
+    },
+    {
+      "name": "characterization_present",
+      "status": "PASS",
+      "detail": "label-blind profiles"
+    },
+    {
+      "name": "trajectories_present",
+      "status": "PASS",
+      "detail": "phenotype trajectories"
+    },
+    {
+      "name": "enrichment_subject_perm",
+      "status": "PASS",
+      "detail": "permutation unit=subject"
+    },
+    {
+      "name": "confounding_present",
+      "status": "PASS",
+      "detail": "anthropometry vs phenotype"
+    },
+    {
+      "name": "labels_post_discovery",
+      "status": "PASS",
+      "detail": "labels joined after freeze"
+    },
+    {
+      "name": "not_two_large_phenotypes",
+      "status": "WARNING",
+      "detail": "sizes={1: np.int64(27), 2: np.int64(4)}; majority/outgroup split \u2014 do not over-interpret as two gait types"
+    },
+    {
+      "name": "height_association",
+      "status": "WARNING",
+      "detail": "height Kruskal p=0.0499; phenotype may partly track stature"
+    }
+  ],
+  "choice": {
+    "k": 2,
+    "method": "hierarchical",
+    "reason": "max_bootstrap_ari_among_stable_hierarchical",
+    "silhouette": 0.41503306618271296,
+    "mean_boot_ari": 0.7546071898190309,
+    "min_size": 4,
+    "criteria": {
+      "min_cluster_size": 4,
+      "min_silhouette": 0.2,
+      "min_mean_boot_ari": 0.5
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "aggregation": "subject_nanmedian",
+  "cluster_threshold_|t|": 2.045,
+  "n_perm_primary": 9999,
+  "n_perm_secondary": 1999,
+  "seed": 20260813,
+  "axes": "ax1/ax2/ax3_not_AP_ML_vertical",
+  "interpolation": "none_on_inferential_trajectories"
+}

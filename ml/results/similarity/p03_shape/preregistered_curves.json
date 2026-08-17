@@ -1,0 +1,31 @@
+{
+  "analysis": "P0.3_shape_space_waveform_similarity",
+  "preregistered_before_any_real_test": true,
+  "locked_date": "2026-08-16",
+  "n_curves": 12,
+  "source": "Phase 1 frozen normalized_core.npz → subject nanmedian over cycles (label-blind). Not recomputed from raw MAT.",
+  "normalization": "zscore_across_101_phase_points_per_curve_per_subject",
+  "normalization_rationale": "Z-score (zero mean, unit variance over the 101 points) discards ROM/amplitude and DC offset while preserving shape/timing. Applied before both Pearson and DTW so DTW cannot re-introduce amplitude. Pearson alone is already scale-invariant; the shared z-score keeps the two measures on the same representation.",
+  "note_pelvis": "LPelvisAngles/RPelvisAngles are not in Phase 1 normalized_core (core pelvis = markers). LASI_ax1 and RASI_ax1 are the frozen Phase-1 pelvis proxies.",
+  "selection_rule": "Primary sagittal/progress axis (ax1) for angles; pelvis markers LASI/RASI ax1; CentreOfMass ax1 + ax3. No post-hoc curve search.",
+  "primary_statistics": [
+    "mean_over_curves_of_mean_pairwise_pearson_among_victims",
+    "mean_over_curves_of_mean_pairwise_dtw_distance_among_victims"
+  ],
+  "unit": "subject",
+  "fdr_family": "12_preregistered_curves",
+  "curves": [
+    {"id": "LHipAngles_ax1", "signal": "LHipAngles", "axis": "ax1", "family": "hip"},
+    {"id": "RHipAngles_ax1", "signal": "RHipAngles", "axis": "ax1", "family": "hip"},
+    {"id": "LKneeAngles_ax1", "signal": "LKneeAngles", "axis": "ax1", "family": "knee"},
+    {"id": "RKneeAngles_ax1", "signal": "RKneeAngles", "axis": "ax1", "family": "knee"},
+    {"id": "LAnkleAngles_ax1", "signal": "LAnkleAngles", "axis": "ax1", "family": "ankle"},
+    {"id": "RAnkleAngles_ax1", "signal": "RAnkleAngles", "axis": "ax1", "family": "ankle"},
+    {"id": "LFootProgressAngles_ax1", "signal": "LFootProgressAngles", "axis": "ax1", "family": "foot_progress"},
+    {"id": "RFootProgressAngles_ax1", "signal": "RFootProgressAngles", "axis": "ax1", "family": "foot_progress"},
+    {"id": "LASI_ax1", "signal": "LASI", "axis": "ax1", "family": "pelvis"},
+    {"id": "RASI_ax1", "signal": "RASI", "axis": "ax1", "family": "pelvis"},
+    {"id": "CentreOfMass_ax1", "signal": "CentreOfMass", "axis": "ax1", "family": "com"},
+    {"id": "CentreOfMass_ax3", "signal": "CentreOfMass", "axis": "ax3", "family": "com"}
+  ]
+}

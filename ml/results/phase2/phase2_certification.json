@@ -1,0 +1,111 @@
+{
+  "generated": "2026-08-13",
+  "status": "PASS",
+  "counts": {
+    "cycle_rows": 880,
+    "cycle_feature_columns": 714,
+    "subject_rows": 31,
+    "subject_columns": 3665,
+    "catalog_entries": 805,
+    "cycle_specs": 714,
+    "subject_extra_specs": 91,
+    "expected_subject_columns": 3665
+  },
+  "checks": [
+    {
+      "name": "no_label_leakage_tables",
+      "status": "PASS",
+      "detail": "cycle=none; subject=none"
+    },
+    {
+      "name": "no_labels_in_feature_calculation",
+      "status": "PASS",
+      "detail": "no victimization tokens in features/ or aggregation/"
+    },
+    {
+      "name": "catalog_labels_used_false",
+      "status": "PASS",
+      "detail": "catalog.labels_used=False"
+    },
+    {
+      "name": "no_silent_imputation",
+      "status": "PASS",
+      "detail": "ROM uses finite-only drop; derivative path interpolates NaNs and is documented in the catalog"
+    },
+    {
+      "name": "anatomical_metadata",
+      "status": "PASS",
+      "detail": "all specs have region/side/related_anatomy"
+    },
+    {
+      "name": "units_allowed",
+      "status": "PASS",
+      "detail": "all units in controlled vocabulary"
+    },
+    {
+      "name": "units_inherited_flagged",
+      "status": "PASS",
+      "detail": "no inherited placeholder units"
+    },
+    {
+      "name": "source_signal_valid",
+      "status": "PASS",
+      "detail": "all source_signal values resolve to core signals, events, or cycle features"
+    },
+    {
+      "name": "axes_not_anatomical",
+      "status": "PASS",
+      "detail": "feature names/descriptions use ax1/ax2/ax3, not AP/ML/vertical"
+    },
+    {
+      "name": "catalog_coordinate_note",
+      "status": "PASS",
+      "detail": "AP/ML/vertical not certified; spatial features use axis_1/2/3."
+    },
+    {
+      "name": "cycle_catalog_vs_table",
+      "status": "PASS",
+      "detail": "catalog 714 vs table 714; only_catalog=[]; only_table=[]"
+    },
+    {
+      "name": "catalog_805_reconcile",
+      "status": "PASS",
+      "detail": "all_specs=805 cycle=714 extra=91 (expected extra symmetry+variability)"
+    },
+    {
+      "name": "subject_columns_traced",
+      "status": "PASS",
+      "detail": "subject_cols=3665 expected=3665 untraced=none"
+    },
+    {
+      "name": "savitzky_golay_documented",
+      "status": "PASS",
+      "detail": "window=11 poly=3 constants=11/3"
+    },
+    {
+      "name": "phase_bins_0_100",
+      "status": "PASS",
+      "detail": "bins=((0, 10), (10, 20), (20, 30), (30, 40), (40, 50), (50, 60), (60, 70), (70, 80), (80, 90), (90, 100)); missing_names=none; ramp 0-10 mean=4.5 (expect 4.5); 90-100 mean=95.0 (expect 95)"
+    },
+    {
+      "name": "within_subject_median_mean_sd_cv",
+      "status": "PASS",
+      "detail": "S14 LKneeAngles_ax1_rom median=65.71893581748009 vs recomputed 65.71893581748009"
+    },
+    {
+      "name": "no_cross_subject_influence",
+      "status": "PASS",
+      "detail": "S3 LKneeAngles_ax1_rom median with all subjects=68.31004357337952; after dropping S2 cycles=68.31004357337952"
+    },
+    {
+      "name": "symmetry_ipsilateral_pairing",
+      "status": "PASS",
+      "detail": "S14 |L-cycle LKnee - R-cycle RKnee|=6.620949447154999; stored=6.620949447154999; same-window-all-cycles |L-R|=7.183148235082626 (must not be the stored value unless equal)"
+    },
+    {
+      "name": "deterministic_extract",
+      "status": "PASS",
+      "detail": "repeat kinematic extract identical"
+    }
+  ]
+}

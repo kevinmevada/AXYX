@@ -1,0 +1,78 @@
+{
+  "summary": {
+    "lambdas": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0,
+      1.25,
+      1.5,
+      2.0,
+      3.0
+    ],
+    "n_sim": 1000,
+    "n_perm": 999,
+    "alpha": 0.05,
+    "power": [
+      0.052,
+      0.091,
+      0.291,
+      0.848,
+      0.995,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "mean_observed_cosine": [
+      0.10911835114146004,
+      0.140430385916014,
+      0.21133519562055295,
+      0.3079956237909222,
+      0.3994381814397216,
+      0.47518138706253404,
+      0.5471607957575649,
+      0.6533676181646951,
+      0.7889606377792873
+    ],
+    "n_reject": [
+      52,
+      91,
+      291,
+      848,
+      995,
+      1000,
+      1000,
+      1000,
+      1000
+    ],
+    "mde_lambda_80": 0.7284560143626572,
+    "mde_mean_cosine_80": 0.2996658202861148,
+    "fpr_at_zero": 0.052,
+    "power_at_large": 1.0,
+    "typical_norm": 8.382963989053888,
+    "ledoit_wolf_shrinkage": 0.39786415790979224,
+    "observed_p01_cosine": 0.05181913119541501,
+    "seed": 20260813
+  },
+  "noise": {
+    "typical_norm": 8.382963989053888,
+    "mean_control_norm": 11.7693812688447,
+    "n_controls": 14.0,
+    "n_dims": 27.0,
+    "ledoit_wolf_shrinkage": 0.39786415790979224,
+    "ledoit_wolf_shrinkage_controls_only": 0.45391626136483715,
+    "source": "ledoit_wolf_all_31_control_referenced_deviations",
+    "note": "controls-only LW failed the frozen-null shape check (shrinkage=0.454); using all 31 D_i"
+  },
+    "noise_model": "empirical_injection_on_residualized_31x27_cloud",
+    "null_compare": {
+    "sim_mean": 0.10911835114146004,
+    "sim_sd": 0.07627327874267306,
+    "real_mean": 0.11029207303487745,
+    "real_sd": 0.07713397994007039,
+    "rel_mean_diff": 0.010641942445270806,
+    "rel_sd_diff": 0.011158521809128654
+  }
+}

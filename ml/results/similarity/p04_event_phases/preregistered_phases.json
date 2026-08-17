@@ -1,0 +1,75 @@
+{
+  "analysis": "P0.4_event_localized_phase_similarity",
+  "preregistered_before_any_real_test": true,
+  "locked_date": "2026-08-16",
+  "audit": {
+    "source": "results/phase1/gait_cycle_inventory.csv (880 cycles)",
+    "stored_events": [
+      "initial_contact_frame (IC, cycle start)",
+      "opposite_foot_off_frame",
+      "mid_stance_frame (Midsvnt)",
+      "opposite_contact_frame (opposite FC)",
+      "ipsilateral_foot_off_frame",
+      "next_contact_frame (cycle end)"
+    ],
+    "completeness": "100% of cycles have all listed events; strict temporal order holds in 100%",
+    "idealized_8_phase_availability": {
+      "loading_response": "YES — IC → opposite FO",
+      "mid_stance": "YES — opposite FO → mid_stance event",
+      "terminal_stance": "YES — mid_stance → opposite FC",
+      "pre_swing": "YES — opposite FC → ipsilateral FO",
+      "initial_swing": "NO — no feet-adjacent / toe-clearance event stored",
+      "mid_swing": "NO — no tibia-vertical / mid-swing event stored",
+      "terminal_swing": "NO — cannot split swing without additional events",
+      "swing_undivided": "YES — ipsilateral FO → next IC (single swing window)"
+    },
+    "decision": "Use the 5 reconstructable event-bounded windows only. Do not interpolate ISw/MSw/TSw."
+  },
+  "n_phases": 5,
+  "n_curves": 12,
+  "n_aggregations": 2,
+  "n_test_types": 2,
+  "n_fdr_family": 240,
+  "fdr_family_formula": "5 phases × 12 P0.3 curves × 2 aggregations (mean, rom) × 2 tests (deviation_cosine, abnormality_jaccard)",
+  "curves_source": "results/similarity/p03_shape/preregistered_curves.json",
+  "aggregations": ["mean", "rom"],
+  "test_types": ["deviation_cosine", "abnormality_jaccard"],
+  "unit": "subject",
+  "phases": [
+    {
+      "id": "loading_response",
+      "label": "Loading response",
+      "start_event": "initial_contact",
+      "end_event": "opposite_foot_off",
+      "clinical_note": "Double support after IC; Perry LR"
+    },
+    {
+      "id": "mid_stance",
+      "label": "Mid-stance",
+      "start_event": "opposite_foot_off",
+      "end_event": "mid_stance",
+      "clinical_note": "Opposite FO to stored Midsvnt event (not a fixed 10–30% bin)"
+    },
+    {
+      "id": "terminal_stance",
+      "label": "Terminal stance",
+      "start_event": "mid_stance",
+      "end_event": "opposite_contact",
+      "clinical_note": "Midsvnt to opposite FC"
+    },
+    {
+      "id": "pre_swing",
+      "label": "Pre-swing",
+      "start_event": "opposite_contact",
+      "end_event": "ipsilateral_foot_off",
+      "clinical_note": "Opposite FC to ipsilateral FO; Perry PSw"
+    },
+    {
+      "id": "swing",
+      "label": "Swing (undivided)",
+      "start_event": "ipsilateral_foot_off",
+      "end_event": "next_contact",
+      "clinical_note": "Entire swing; ISw/MSw/TSw not separable from stored events"
+    }
+  ]
+}

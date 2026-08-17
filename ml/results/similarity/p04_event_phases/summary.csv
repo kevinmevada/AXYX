@@ -1,0 +1,3 @@
+representation,n_subjects,n_victims,n_controls,n_phases,n_curves,n_aggregations,n_fdr_family,n_fdr_le_0_10,n_fdr_le_0_05,min_perm_p,residualized,residual_covariates,n_perm,seed
+event_phase_windows,31,17,14,5,12,2,240,0,0,0.0279,False,(),9999,20260813
+event_phase_windows_residualized,31,17,14,5,12,2,240,0,0,0.0188,True,"('height_cm', 'mass_kg', 'mean_leg_cm', 'cycle_duration_s_median')",9999,20260813
